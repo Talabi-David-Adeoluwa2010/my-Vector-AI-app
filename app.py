@@ -194,7 +194,7 @@ with col_lang1:
     clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
 # Secure API Auto-Engine Connection
-st.session_state.groq_key = "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"
+st.session_state.groq_key = "YOUR_PASTED_GROQ_KEY_HERE"
 client = Groq(api_key=st.session_state.groq_key)
 
 if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
@@ -863,5 +863,7 @@ with st.container():
         allocation_metrics = pd.DataFrame({
             "Asset Pillars": ["Venture Growth", "Hard Asset Hedge", "Conservative Cash"],
             "Capital Allocation ($)": [growth_cap, hedge_cap, conservative_remainder]
+        }).set_index("Asset Pillars")
+        st.bar_chart(allocation_metrics)
         }).set_index("Asset Pillars")
         st.bar_chart(allocation_metrics)
