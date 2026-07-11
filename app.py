@@ -1,1140 +1,842 @@
-import tkinter as tk
-from tkinter import messagebox
-from datetime import datetime
+import os
+import streamlit as st
+import PyPDF2
+import json
+import base64
+import time
+from datetime import datetime, timedelta
+import pandas as pd
+from groq import Groq
+from PIL import Image
+import io
+import urllib.parse
 
+VAULT_FILE = ".vektor_vault.json"
+HISTORY_FILE = ".vektor_history.json"
+NOTEPAD_FILE = ".vektor_notepad.json"
+METRICS_FILE = ".vektor_admin_metrics.json"
+PINS_FILE = ".vektor_activation_pins.json"
 
-class CBTStudyApp:
-    def _init_(self, root):
-        self.root = root
-        self.root.title("Jesus_boy CBT Exam Portal")
-        self.root.configure(bg="#0f172a")
-        self.root.attributes("-fullscreen", True)
+# ==========================================
+# AUTHENTICATION & STORAGE UTILITIES
+# ==========================================
+def encode_cred(text):
+    return base64.b64encode(text.encode()).decode()
 
-        self.screen_w = self.root.winfo_screenwidth()
-        self.screen_h = self.root.winfo_screenheight()
+def load_vault():
+    if os.path.exists(VAULT_FILE):
+        try:
+            with open(VAULT_FILE, "r") as f: return json.load(f)
+        except: return {}
+    return {}
 
-        self.current_frame = None
-        self.auth_mode = "login"
+def save_to_vault(username, password):
+    vault = load_vault()
+    vault[encode_cred(username)] = encode_cred(password)
+    with open(VAULT_FILE, "w") as f: json.dump(vault, f)
+    track_user_activity(username, action="register")
 
-        self.users = {
-            "Jesus_admin": "Jesus_boy",
-            "Jesus": "david@123"
+def load_history(username):
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r") as f:
+                full_history = json.load(f)
+                return full_history.get(encode_cred(username), {})
+        except: return {}
+    return {}
+
+def save_history(username, key, data):
+    full_history = {}
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r") as f: full_history = json.load(f)
+        except: pass
+    user_key = encode_cred(username)
+    if user_key not in full_history: full_history[user_key] = {}
+    full_history[user_key][key] = data
+    with open(HISTORY_FILE, "w") as f: json.dump(full_history, f)
+
+def load_notepad(username):
+    if os.path.exists(NOTEPAD_FILE):
+        try:
+            with open(NOTEPAD_FILE, "r") as f:
+                data = json.load(f)
+                user_data = data.get(encode_cred(username), {"current": "", "history": []})
+                if isinstance(user_data, str):
+                    return {"current": user_data, "history": []}
+                return user_data
+        except: return {"current": "", "history": []}
+    return {"current": "", "history": []}
+
+def save_notepad(username, content, history_list):
+    notes = {}
+    if os.path.exists(NOTEPAD_FILE):
+        try:
+            with open(NOTEPAD_FILE, "r") as f: notes = json.load(f)
+        except: pass
+    notes[encode_cred(username)] = {"current": content, "history": history_list}
+    with open(NOTEPAD_FILE, "w") as f: json.dump(notes, f)
+
+# ==========================================
+# BACKGROUND USER ACTIVITY METRICS AGENT
+# ==========================================
+def load_admin_metrics():
+    if os.path.exists(METRICS_FILE):
+        try:
+            with open(METRICS_FILE, "r") as f: return json.load(f)
+        except: return {}
+    return {}
+
+def save_admin_metrics(data):
+    with open(METRICS_FILE, "w") as f: json.dump(data, f)
+
+def load_pins():
+    if os.path.exists(PINS_FILE):
+        try:
+            with open(PINS_FILE, "r") as f: return json.load(f)
+        except: return {}
+    return {}
+
+def save_pins(data):
+    with open(PINS_FILE, "w") as f: json.dump(data, f)
+
+def track_user_activity(username, action="login"):
+    metrics = load_admin_metrics()
+    u_key = encode_cred(username)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if u_key not in metrics:
+        metrics[u_key] = {
+            "username": username,
+            "registered_at": now_str,
+            "last_active": now_str,
+            "status": "Active",
+            "payment_status": "Unpaid",
+            "license_expiry": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
         }
+    else:
+        metrics[u_key]["last_active"] = now_str
+        if action == "login" or action == "heartbeat":
+            metrics[u_key]["status"] = "Active"
+            
+    save_admin_metrics(metrics)
 
-        self.logged_in_user = None
+# ==========================================
+# MULTILINGUAL DICTIONARY MATRIX
+# ==========================================
+LANG_DATA = {
+    "English": {
+        "title": "⚡ VEKTOR.AI // Multi-Agent Node Matrix", 
+        "gate_title": "SECURE LOCAL SHELL — PERSONAL WORKSPACE PORTAL",
+        "signin": "🔐 Sign In", "register": "🛠️ Register New Workspace", "username": "Security ID Username",
+        "password": "Access Key Password", "btn_auth": "Authorize Access", "btn_reg": "Provision Hidden Profile Space",
+        "nav_lbl": "Select Operation Target Engine:", "clear_cache": "Clear Cache Data 🗑️", "logout": "Terminate Session 🔓",
+        "search_title": "🌐 Global Commodity Cost & Currency Conversion Oracle", "search_btn": "🔍 Look Up Commodity Cost",
+        "search_ph": "e.g., 1 bag of cement, barrel of crude oil, price of rice per ton", "curr_lbl": "Target Currency Symbol:",
+        "upload_lbl": "Upload Corporate Knowledge Assets (PDF)", "orac_res": "🌐 Pricing Oracle Result:",
+        "comp_panel": "📊 Company Progress Panel", "oracle_chat": "💬 Context Oracle Chat", "exec_brief": "📝 Executive Briefing Engine",
+        "composer": "✉️ Contextual Draft Composer", "extractor": "📊 Structural Data Extractor", "cross_file": "🔍 Cross-File Intelligence",
+        "tracker": "📅 Task & Milestone Tracker", "sandbox": "💡 Brainstorm Sandbox", "predictor": "💸 Resource Predictor",
+        "indexer": "🗂️ Knowledge Base Indexer", "runway_plan": "🛡️ Runway & Reinvestment Planner",
+        "run_diag": "⚡ Run System Diagnostic Engine", "error_ingest": "🚨 Ingestion Missing: Drop asset documents into the workspace first.",
+        "calc_btn": "📊 Calculate Parameters", "success_ac": "⚡ Data Accelerator updated successfully!",
+        "save_fn": "Save As (Filename):", "dl_lbl": "📥 Save As (Download File)", "metrics_lbl": "Enter comma-separated metric values:"
+    }
+}
 
-        self.practice_timer_seconds = 0
-        self.practice_timer_running = False
-        self.practice_timer_job = None
-        self.current_exam_name = ""
-        self.current_exam_year = ""
+st.set_page_config(page_title="Vektor AI", layout="wide")
 
-        self.root.bind("<Escape>", self.exit_fullscreen)
+st.markdown("""
+    <style>
+    .stApp { background: linear-gradient(135deg, #05070f 0%, #0c0f1d 100%); color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .cyber-logo { font-size: 3.2rem; font-weight: 900; background: linear-gradient(90deg, #00f2fe, #4facfe, #00f2fe); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; font-family: 'Courier New', Courier, monospace; }
+    .scanning-line { width: 100%; height: 4px; background: linear-gradient(90deg, transparent, #00f2fe, #4facfe, transparent); background-size: 200% 100%; animation: scanMove 2s linear infinite; margin-bottom: 20px; }
+    @keyframes scanMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div, .stNumberInput>div>div>input { background-color: #121626 !important; color: #ffffff !important; border: 1px solid #1f293d !important; border-radius: 10px !important; }
+    .feature-card { background: rgba(18, 22, 38, 0.6); border: 1px solid #1f293d; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.05); }
+    .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-bottom: 15px; }
+    .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
+    .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
+    </style>
+""", unsafe_allow_html=True)
 
-        self.show_intro_screen()
+# PINNED LIVE CLOCK
+clock_placeholder = st.empty()
+current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
-    def exit_fullscreen(self, event=None):
-        self.root.attributes("-fullscreen", False)
+# Secure API Auto-Engine Connection
+st.session_state.groq_key = "YOUR_PASTED_GROQ_KEY_HERE"
+client = Groq(api_key=st.session_state.groq_key)
 
-    def clear_screen(self):
-        self.stop_practice_timer()
-        if self.current_frame is not None:
-            self.current_frame.destroy()
+if "lang" not in st.session_state: st.session_state.lang = "English"
+tr = LANG_DATA["English"]
 
-    def stop_practice_timer(self):
-        self.practice_timer_running = False
-        if self.practice_timer_job:
-            try:
-                self.root.after_cancel(self.practice_timer_job)
-            except Exception:
-                pass
-            self.practice_timer_job = None
+if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
 
-    # =========================
-    # INTRO / LOADING SCREEN
-    # =========================
-    def show_intro_screen(self):
-        self.clear_screen()
+# ==========================================
+# SEAMLESS LOGIN GATE WITH DYNAMIC PIN ACTIVATION
+# ==========================================
+if "authenticated" not in st.session_state: st.session_state.authenticated = False
+if "current_user" not in st.session_state: st.session_state.current_user = ""
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
-        self.intro_frame = tk.Frame(self.root, bg="#0b1220")
-        self.intro_frame.pack(fill="both", expand=True)
-        self.current_frame = self.intro_frame
+def render_security_gate():
+    st.markdown("<div style='text-align: center; margin-top: 3%;'>", unsafe_allow_html=True)
+    st.markdown("<div class='cyber-logo'>⚡ VEKTOR.AI</div>", unsafe_allow_html=True)
+    st.caption(tr["gate_title"])
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    _, center_col, _ = st.columns([1, 1.5, 1])
+    with center_col:
+        auth_mode = st.tabs([tr["signin"], tr["register"]])
+        with auth_mode[0]:
+            input_user = st.text_input(tr["username"], key="login_user")
+            input_pass = st.text_input(tr["password"], type="password", key="login_pass")
+            if st.button(tr["btn_auth"], use_container_width=True):
+                vault = load_vault()
+                if encode_cred(input_user) in vault and vault[encode_cred(input_user)] == encode_cred(input_pass):
+                    
+                    # TRIAL AND EXPIRY CHECK AGENT
+                    metrics = load_admin_metrics()
+                    u_key = encode_cred(input_user)
+                    if u_key in metrics:
+                        user_meta = metrics[u_key]
+                        expiry_time_str = user_meta.get("license_expiry")
+                        
+                        is_unpaid = user_meta.get("payment_status", "Unpaid") != "Paid"
+                        is_expired = False
+                        if expiry_time_str:
+                            is_expired = datetime.now() > datetime.strptime(expiry_time_str, "%Y-%m-%d %H:%M:%S")
+                        
+                        if is_unpaid and is_expired:
+                            st.error("🚨 Your Free Access License Has Expired!")
+                            st.write("Please paste a valid structural verification activation key code below to update your operational window matrix.")
+                            
+                            activation_input = st.text_input("Enter Activation PIN (e.g., VK-XXXX-XXXX):", key="activation_pin_box")
+                            if st.button("🔓 Authenticate & Apply Key", use_container_width=True):
+                                pins_db = load_pins()
+                                if activation_input in pins_db and pins_db[activation_input]["status"] == "Unused":
+                                    pin_details = pins_db[activation_input]
+                                    
+                                    # Flag the token as redeemed
+                                    pins_db[activation_input]["status"] = "Claimed"
+                                    pins_db[activation_input]["claimed_by"] = input_user
+                                    save_pins(pins_db)
+                                    
+                                    # Apply new timeline variables
+                                    if pin_details["is_forever"]:
+                                        metrics[u_key]["payment_status"] = "Paid"
+                                    else:
+                                        days_extension = pin_details["days_allotted"]
+                                        new_expiry = datetime.now() + timedelta(days=days_extension)
+                                        metrics[u_key]["license_expiry"] = new_expiry.strftime("%Y-%m-%d %H:%M:%S")
+                                        metrics[u_key]["payment_status"] = "Unpaid" # Reset to check timeline expiration
+                                        
+                                    save_admin_metrics(metrics)
+                                    st.success("🎉 Activation Successful! Access Window Granted. Please click Authorize Access again.")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("🚨 Invalid or already claimed Activation PIN.")
+                            st.stop()
+                    
+                    st.session_state.authenticated = True
+                    st.session_state.current_user = input_user
+                    track_user_activity(input_user, action="login")
+                    user_history = load_history(input_user)
+                    st.session_state.chat_history = user_history.get("chat", [])
+                    for k in ["briefing", "draft", "structure", "cross", "tracker", "sandbox", "predictor", "indexer", "runway"]:
+                        st.session_state[f"{k}_store"] = user_history.get(k, "")
+                    st.rerun()
+                else: st.error("🚨 Access Denied.")
+        with auth_mode[1]:
+            new_user = st.text_input(tr["username"], key="reg_user")
+            new_pass = st.text_input(tr["password"], type="password", key="reg_pass")
+            if st.button(tr["btn_reg"], use_container_width=True):
+                if new_user.strip() != "" and len(new_pass) >= 4:
+                    vault = load_vault()
+                    if encode_cred(new_user) in vault: st.error("🚨 Account exists.")
+                    else:
+                        save_to_vault(new_user, new_pass)
+                        st.success("Workspace Provisioned! You have been granted a 1-Week Free Trial balance.")
+    st.stop()
 
-        self.canvas = tk.Canvas(
-            self.intro_frame,
-            bg="#0b1220",
-            highlightthickness=0
+if not st.session_state.authenticated: render_security_gate()
+
+def query_standalone_engine(prompt):
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
         )
-        self.canvas.pack(fill="both", expand=True)
-        self.canvas.update()
+        return completion.choices[0].message.content
+    except Exception as e: return f"Cloud Connection Interrupted: {str(e)}"
 
-        w = self.screen_w
-        h = self.screen_h
+track_user_activity(st.session_state.current_user, action="heartbeat")
 
-        self.canvas.create_rectangle(0, 0, w, h, fill="#0b1220", outline="")
-        self.canvas.create_line(100, 120, w - 100, 120, fill="#1e293b", width=2)
-        self.canvas.create_line(100, h - 120, w - 100, h - 120, fill="#1e293b", width=2)
+# Sidebar Operations
+with st.sidebar:
+    st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
+    st.caption(f"Logged as: **{st.session_state.current_user}**")
+    module_selection = st.selectbox(tr["nav_lbl"], [
+        tr["comp_panel"], tr["oracle_chat"], tr["exec_brief"], tr["composer"], tr["extractor"], 
+        tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
+    ])
+    st.write("---")
+    
+    st.markdown("### 🏛️ Dedicated Workspaces")
+    if st.button("📝 Open Fullscreen Notepad", use_container_width=True):
+        st.session_state.active_view = "NOTEPAD"
+        st.rerun()
+    if st.button("🎨 Open Media & Vision Foundry", use_container_width=True):
+        st.session_state.active_view = "FOUNDRY"
+        st.rerun()
+    if st.button("💳 Billing & Access Management", use_container_width=True):
+        st.session_state.active_view = "BILLING"
+        st.rerun()
+        
+    st.write("---")
+    st.markdown("### 💾 Core Export Tools")
+    export_filename = st.text_input(tr["save_fn"], value="vektor_report.txt")
+    
+    current_export_payload = f"Vektor AI Operational Log Archive\nUser: {st.session_state.current_user}\nModule Target: {module_selection}\n---\n"
+    if module_selection == tr["oracle_chat"]: current_export_payload += json.dumps(st.session_state.get("chat_history", []), indent=2)
+    elif module_selection == tr["exec_brief"]: current_export_payload += st.session_state.get("briefing_store", "")
+    elif module_selection == tr["composer"]: current_export_payload += st.session_state.get("draft_store", "")
+    elif module_selection == tr["extractor"]: current_export_payload += st.session_state.get("structure_store", "")
+    elif module_selection == tr["cross_file"]: current_export_payload += st.session_state.get("cross_store", "")
+    elif module_selection == tr["tracker"]: current_export_payload += st.session_state.get("tracker_store", "")
+    elif module_selection == tr["sandbox"]: current_export_payload += st.session_state.get("sandbox_store", "")
+    elif module_selection == tr["predictor"]: current_export_payload += st.session_state.get("predictor_store", "")
+    elif module_selection == tr["indexer"]: current_export_payload += st.session_state.get("indexer_store", "")
+    elif module_selection == tr["runway_plan"]: current_export_payload += st.session_state.get("runway_store", "")
 
-        self.canvas.create_text(
-            130, 75,
-            text="Jesus_boy CBT",
-            fill="#38bdf8",
-            font=("Segoe UI", 18, "bold"),
-            anchor="w"
-        )
+    st.download_button(label=tr["dl_lbl"], data=current_export_payload, file_name=export_filename, mime="text/plain", use_container_width=True)
+    st.write("---")
+    if st.button(tr["clear_cache"], use_container_width=True):
+        st.session_state.chat_history = []
+        for key in ["briefing_store", "draft_store", "structure_store", "cross_store", "tracker_store", "sandbox_store", "predictor_store", "indexer_store", "runway_store"]:
+            st.session_state[key] = ""
+            save_history(st.session_state.current_user, key.replace("_store", ""), "")
+        save_history(st.session_state.current_user, "chat", [])
+        st.toast("Local persistent records flushed cleanly!")
+        st.rerun()
+    if st.button(tr["logout"], use_container_width=True):
+        metrics = load_admin_metrics()
+        u_key = encode_cred(st.session_state.current_user)
+        if u_key in metrics:
+            metrics[u_key]["status"] = "Inactive"
+            save_admin_metrics(metrics)
+        st.session_state.authenticated = False
+        st.rerun()
 
-        self.title_x = -800
-        self.title_y = h // 2 - 90
-        self.title = self.canvas.create_text(
-            self.title_x,
-            self.title_y,
-            text="WELCOME TO Jesus_boy CBT",
-            fill="#f8fafc",
-            font=("Segoe UI", 42, "bold"),
-            anchor="w"
-        )
-
-        self.subtitle_x = w + 600
-        self.subtitle_y = h // 2 - 25
-        self.subtitle = self.canvas.create_text(
-            self.subtitle_x,
-            self.subtitle_y,
-            text="Professional CBT Practice for JAMB, WAEC and NECO",
-            fill="#94a3b8",
-            font=("Segoe UI", 22),
-            anchor="e"
-        )
-
-        self.accent_line = self.canvas.create_rectangle(
-            140, self.title_y + 60, 140, self.title_y + 68,
-            fill="#22c55e",
-            outline=""
-        )
-
-        self.loading_text = self.canvas.create_text(
-            w // 2,
-            h - 180,
-            text="Loading",
-            fill="#cbd5e1",
-            font=("Segoe UI", 18, "bold")
-        )
-
-        self.progress_bg = self.canvas.create_rectangle(
-            w // 2 - 250, h - 145, w // 2 + 250, h - 120,
-            fill="#1e293b", outline=""
-        )
-
-        self.progress_fill = self.canvas.create_rectangle(
-            w // 2 - 250, h - 145, w // 2 - 250, h - 120,
-            fill="#38bdf8", outline=""
-        )
-
-        self.canvas.create_text(
-            w // 2,
-            h - 90,
-            text="Press ESC to exit full screen",
-            fill="#64748b",
-            font=("Segoe UI", 11)
-        )
-
-        self.dot_count = 0
-        self.progress_step = 0
-        self.total_progress_steps = 10000 // 100
-
-        self.animate_title()
-        self.animate_subtitle()
-        self.animate_loading()
-        self.animate_progress()
-
-        self.root.after(10000, self.show_auth_page)
-
-    def animate_title(self):
-        target_x = 140
-        if self.current_frame != self.intro_frame:
-            return
-        if self.title_x < target_x:
-            self.title_x += 28
-            self.canvas.coords(self.title, self.title_x, self.title_y)
-
-            line_end = min(self.title_x + 360, 560)
-            self.canvas.coords(
-                self.accent_line,
-                140, self.title_y + 60, line_end, self.title_y + 68
-            )
-
-            self.root.after(12, self.animate_title)
-
-    def animate_subtitle(self):
-        target_x = self.screen_w - 160
-        if self.current_frame != self.intro_frame:
-            return
-        if self.subtitle_x > target_x:
-            self.subtitle_x -= 24
-            self.canvas.coords(self.subtitle, self.subtitle_x, self.subtitle_y)
-            self.root.after(12, self.animate_subtitle)
-
-    def animate_loading(self):
-        if self.current_frame != self.intro_frame:
-            return
-        self.dot_count = (self.dot_count + 1) % 4
-        dots = "." * self.dot_count
-        self.canvas.itemconfig(self.loading_text, text=f"Loading{dots}")
-        self.root.after(350, self.animate_loading)
-
-    def animate_progress(self):
-        if self.current_frame != self.intro_frame:
-            return
-
-        self.progress_step += 1
-        w = self.screen_w
-        left = w // 2 - 250
-        total_width = 500
-        fill_width = (self.progress_step / self.total_progress_steps) * total_width
-        self.canvas.coords(
-            self.progress_fill,
-            left, self.screen_h - 145,
-            left + fill_width, self.screen_h - 120
-        )
-
-        if self.progress_step < self.total_progress_steps:
-            self.root.after(100, self.animate_progress)
-
-    # =========================
-    # AUTH PAGE
-    # =========================
-    def show_auth_page(self):
-        self.clear_screen()
-
-        self.auth_frame = tk.Frame(self.root, bg="#0f172a")
-        self.auth_frame.pack(fill="both", expand=True)
-        self.current_frame = self.auth_frame
-
-        container = tk.Frame(self.auth_frame, bg="#0f172a")
-        container.pack(fill="both", expand=True, padx=70, pady=45)
-
-        left_panel = tk.Frame(container, bg="#111827", width=620)
-        left_panel.pack(side="left", fill="both", expand=True, padx=(0, 20))
-        left_panel.pack_propagate(False)
-
-        tk.Label(
-            left_panel,
-            text="JESUS_BOY CBT PORTAL",
-            bg="#111827",
-            fg="#38bdf8",
-            font=("Segoe UI", 18, "bold")
-        ).pack(anchor="w", padx=40, pady=(45, 15))
-
-        tk.Label(
-            left_panel,
-            text="Practice smarter.\nPrepare better.\nScore higher.",
-            bg="#111827",
-            fg="#f8fafc",
-            justify="left",
-            font=("Segoe UI", 32, "bold")
-        ).pack(anchor="w", padx=40, pady=(10, 18))
-
-        tk.Label(
-            left_panel,
-            text="Access professional CBT practice for JAMB, WAEC and NECO with a beautiful dashboard and year-based exam practice.",
-            bg="#111827",
-            fg="#94a3b8",
-            justify="left",
-            wraplength=500,
-            font=("Segoe UI", 14)
-        ).pack(anchor="w", padx=40, pady=(0, 30))
-
-        self.make_feature_card(left_panel, "JAMB Practice", "Prepare with past questions and yearly exam categories.").pack(fill="x", padx=40, pady=8)
-        self.make_feature_card(left_panel, "WAEC Practice", "Revise with organized subject practice and exam years.").pack(fill="x", padx=40, pady=8)
-        self.make_feature_card(left_panel, "NECO Practice", "Train with structured mock practice and quick access tools.").pack(fill="x", padx=40, pady=8)
-
-        tk.Label(
-            left_panel,
-            text="Default login:\nUsername: Jesus_admin\nPassword: Jesus_boy",
-            bg="#111827",
-            fg="#22c55e",
-            justify="left",
-            font=("Segoe UI", 13, "bold")
-        ).pack(anchor="w", padx=40, pady=(28, 20))
-
-        right_panel = tk.Frame(container, bg="#1e293b", width=460)
-        right_panel.pack(side="right", fill="y")
-        right_panel.pack_propagate(False)
-
-        tk.Label(
-            right_panel,
-            text="Account Access",
-            bg="#1e293b",
-            fg="#f8fafc",
-            font=("Segoe UI", 24, "bold")
-        ).pack(pady=(40, 10))
-
-        toggle_wrap = tk.Frame(right_panel, bg="#1e293b")
-        toggle_wrap.pack(pady=(10, 18))
-
-        self.login_tab_btn = tk.Button(
-            toggle_wrap,
-            text="Login",
-            command=lambda: self.switch_auth_mode("login"),
-            font=("Segoe UI", 12, "bold"),
-            relief="flat",
-            bd=0,
-            padx=28,
-            pady=12,
-            cursor="hand2"
-        )
-        self.login_tab_btn.pack(side="left", padx=6)
-
-        self.signup_tab_btn = tk.Button(
-            toggle_wrap,
-            text="Sign Up",
-            command=lambda: self.switch_auth_mode("signup"),
-            font=("Segoe UI", 12, "bold"),
-            relief="flat",
-            bd=0,
-            padx=28,
-            pady=12,
-            cursor="hand2"
-        )
-        self.signup_tab_btn.pack(side="left", padx=6)
-
-        form = tk.Frame(right_panel, bg="#1e293b")
-        form.pack(fill="x", padx=40, pady=10)
-
-        self.auth_title_label = tk.Label(
-            form,
-            text="Login to Continue",
-            bg="#1e293b",
-            fg="#f8fafc",
-            font=("Segoe UI", 19, "bold")
-        )
-        self.auth_title_label.pack(anchor="w", pady=(5, 18))
-
-        tk.Label(form, text="Username", bg="#1e293b", fg="#cbd5e1", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self.username_entry = tk.Entry(
-            form,
-            font=("Segoe UI", 13),
-            bg="#0f172a",
-            fg="#f8fafc",
-            insertbackground="#f8fafc",
-            relief="flat",
-            bd=0
-        )
-        self.username_entry.pack(fill="x", pady=(8, 18), ipady=12)
-
-        tk.Label(form, text="Password", bg="#1e293b", fg="#cbd5e1", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self.password_entry = tk.Entry(
-            form,
-            font=("Segoe UI", 13),
-            bg="#0f172a",
-            fg="#f8fafc",
-            insertbackground="#f8fafc",
-            relief="flat",
-            bd=0,
-            show="*"
-        )
-        self.password_entry.pack(fill="x", pady=(8, 18), ipady=12)
-
-        self.confirm_label = tk.Label(
-            form,
-            text="Confirm Password",
-            bg="#1e293b",
-            fg="#cbd5e1",
-            font=("Segoe UI", 11, "bold")
-        )
-        self.confirm_entry = tk.Entry(
-            form,
-            font=("Segoe UI", 13),
-            bg="#0f172a",
-            fg="#f8fafc",
-            insertbackground="#f8fafc",
-            relief="flat",
-            bd=0,
-            show="*"
-        )
-
-        self.auth_action_btn = tk.Button(
-            form,
-            text="Login",
-            bg="#38bdf8",
-            fg="#0f172a",
-            activebackground="#38bdf8",
-            activeforeground="#0f172a",
-            font=("Segoe UI", 13, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=14,
-            cursor="hand2",
-            command=self.handle_auth
-        )
-        self.auth_action_btn.pack(fill="x", pady=(10, 12))
-
-        tk.Button(
-            form,
-            text="Exit Full Screen",
-            bg="#334155",
-            fg="#f8fafc",
-            activebackground="#334155",
-            activeforeground="#f8fafc",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=12,
-            cursor="hand2",
-            command=lambda: self.root.attributes("-fullscreen", False)
-        ).pack(fill="x")
-
-        self.switch_auth_mode("login")
-
-        self.username_entry.focus_set()
-        self.root.bind("<Return>", self.handle_enter_key)
-
-    def handle_enter_key(self, event=None):
-        if self.current_frame == self.auth_frame:
-            self.handle_auth()
-
-    def switch_auth_mode(self, mode):
-        self.auth_mode = mode
-
-        if mode == "login":
-            self.login_tab_btn.configure(bg="#38bdf8", fg="#0f172a")
-            self.signup_tab_btn.configure(bg="#334155", fg="#f8fafc")
-            self.auth_title_label.configure(text="Login to Continue")
-            self.auth_action_btn.configure(text="Login")
-            self.confirm_label.pack_forget()
-            self.confirm_entry.pack_forget()
-        else:
-            self.signup_tab_btn.configure(bg="#22c55e", fg="#0f172a")
-            self.login_tab_btn.configure(bg="#334155", fg="#f8fafc")
-            self.auth_title_label.configure(text="Create New Account")
-            self.auth_action_btn.configure(text="Sign Up")
-            self.confirm_label.pack(anchor="w")
-            self.confirm_entry.pack(fill="x", pady=(8, 18), ipady=12)
-
-    def handle_auth(self):
-        username = self.username_entry.get().strip()
-        password = self.password_entry.get().strip()
-
-        if not username or not password:
-            messagebox.showerror("Missing Details", "Please enter username and password.")
-            return
-
-        if self.auth_mode == "login":
-            if username in self.users and self.users[username] == password:
-                self.logged_in_user = username
-                self.show_home_page()
+# ==========================================
+# CENTRALIZED AUTOMATED SYSTEM NOTIFICATION GENERATOR
+# ==========================================
+metrics_db = load_admin_metrics()
+user_encoded_key = encode_cred(st.session_state.current_user)
+if user_encoded_key in metrics_db:
+    meta_info = metrics_db[user_encoded_key]
+    exp_date_str = meta_info.get("license_expiry")
+    payment_status = meta_info.get("payment_status", "Unpaid")
+    
+    if exp_date_str:
+        exp_datetime = datetime.strptime(exp_date_str, "%Y-%m-%d %H:%M:%S")
+        time_delta = exp_datetime - datetime.now()
+        
+        # Display dynamic status banners on top of operational dashboard
+        if payment_status != "Paid":
+            if time_delta.total_seconds() > 0:
+                hours_left = int(time_delta.total_seconds() // 3600)
+                days_left = hours_left // 24
+                st.markdown(f"""
+                    <div class='notification-banner'>
+                        🔔 <b>SYSTEM ALERT / TRIAL STATUS COUNTER:</b> You are running on an evaluation workspace matrix profile. 
+                        Your trial window expires in exactly <b>{days_left} Days ({hours_left} Hours)</b>. 
+                        Please apply a permanent license activation token to keep cloud data lines uninterrupted.
+                    </div>
+                """, unsafe_allow_html=True)
             else:
-                messagebox.showerror("Login Failed", "Invalid username or password.")
+                st.markdown("""
+                    <div class='notification-banner' style='border-left: 5px solid #ef4444;'>
+                        🚨 <b>CRITICAL NOTIFICATION:</b> Your local computation timeline runtime profile token has officially expired. 
+                        Please navigate to the Billing & Access Module or consult administration immediately.
+                    </div>
+                """, unsafe_allow_html=True)
         else:
-            confirm = self.confirm_entry.get().strip()
+            st.markdown("""
+                <div class='notification-banner' style='border-left: 5px solid #10b981; background: linear-gradient(90deg, #064e3b 0%, #022c22 100%);'>
+                    ✅ <b>LICENSE MATRIX STATUS:</b> Verified Secure Sovereign Enterprise Channel. No ongoing pipeline interruptions detected.
+                </div>
+            """, unsafe_allow_html=True)
 
-            if not confirm:
-                messagebox.showerror("Missing Details", "Please confirm your password.")
-                return
+# SCREEN 1: DEDICATED FULLSCREEN NOTEPAD INTERFACE
+if st.session_state.active_view == "NOTEPAD":
+    st.markdown("<div class='cyber-logo'>📝 SECURE WORKSPACE NOTEPAD STORAGE</div>", unsafe_allow_html=True)
+    st.caption("Auto-Saving Encryption Grid — Resizeable Viewport Block")
+    
+    notepad_pack = load_notepad(st.session_state.current_user)
+    current_text = notepad_pack.get("current", "")
+    saved_history = notepad_pack.get("history", [])
+    
+    box_height = st.slider("📐 Adjust Custom Workspace Height (Pixels):", 200, 800, 400, step=50)
+    notepad_input = st.text_area("Write updates, code files, or business strategy details:", value=current_text, height=box_height)
+    
+    col_n1, col_n2 = st.columns(2)
+    with col_n1:
+        if st.button("💾 Securely Save & Sync Updates", use_container_width=True):
+            if notepad_input.strip() != "" and notepad_input != current_text:
+                if notepad_input not in saved_history:
+                    saved_history.insert(0, notepad_input)
+            save_notepad(st.session_state.current_user, notepad_input, saved_history)
+            st.success("Changes synced securely to workspace state database!")
+    with col_n2:
+        if st.button("🏠 Return to System Dashboard", use_container_width=True):
+            st.session_state.active_view = "HOME"
+            st.rerun()
+            
+    st.write("---")
+    st.markdown("### 📑 Recently Saved Memory Vault Logs")
+    if saved_history:
+        for index, historical_note in enumerate(saved_history[:5]):
+            with st.expander(f"Log Memory File #{index + 1} — Snippet: {historical_note[:40]}..."):
+                st.code(historical_note)
+                if st.button(f"🔄 Reload Log File #{index + 1} Into Main Text Box", key=f"reload_note_{index}"):
+                    save_notepad(st.session_state.current_user, historical_note, saved_history)
+                    st.toast("Note loaded successfully into editor view!")
+                    st.rerun()
+    else:
+        st.caption("No historical notes logged inside the local workspace matrix yet.")
+    st.stop()
 
-            if password != confirm:
-                messagebox.showerror("Password Error", "Passwords do not match.")
-                return
+# SCREEN 2: MULTIMODAL MEDIA FOUNDRY & VISION STUDIO
+elif st.session_state.active_view == "FOUNDRY":
+    st.markdown("<div class='cyber-logo'>🎨 MULTIMODAL MEDIA CONTENT FOUNDRY & VISION CAMERA</div>", unsafe_allow_html=True)
+    st.caption("High-Fidelity Real Image Generation, Text-to-Audio Scripting, and Photo Manipulation Matrix")
+    
+    if st.button("🏠 Return to System Dashboard", use_container_width=True):
+        st.session_state.active_view = "HOME"
+        st.rerun()
+        
+    st.write("---")
+    col_m1, col_m2 = st.columns([2, 1])
+    with col_m1:
+        creative_prompt = st.text_input("Enter generation description details:", placeholder="e.g., Ultra-modern corporate high-rise office in Lagos, cyberpunk aesthetics")
+    with col_m2:
+        media_output_type = st.radio("Output Modality Targets:", ["Render Real AI Image", "Generate Audio voiceover Script"])
 
-            if username in self.users:
-                messagebox.showerror("Account Exists", "That username already exists.")
-                return
+    if st.button("🔥 Initialize Media Generation Engine", use_container_width=True):
+        if creative_prompt.strip() != "":
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            if media_output_type == "Render Real AI Image":
+                encoded_prompt = urllib.parse.quote(creative_prompt)
+                real_image_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=1024&height=512&seed=42&nofeed=true"
+                st.markdown(f"<div class='feature-card'><h4>🖼️ Output Image Generated Result Matrix:</h4></div>", unsafe_allow_html=True)
+                st.image(real_image_url, use_container_width=True)
+            else:
+                audio_desc_prompt = f"Convert this description into a highly detailed voiceover text script with technical audio sound design cues: '{creative_prompt}'"
+                simulated_audio_script = query_standalone_engine(audio_desc_prompt)
+                st.markdown(f"<div class='feature-card'><h4>🔊 Immersive Audio Description Script:</h4><br>{simulated_audio_script}</div>", unsafe_allow_html=True)
 
-            self.users[username] = password
-            messagebox.showinfo("Success", "Account created successfully. You can now log in.")
-            self.username_entry.delete(0, tk.END)
-            self.password_entry.delete(0, tk.END)
-            self.confirm_entry.delete(0, tk.END)
-            self.switch_auth_mode("login")
+    st.write("---")
+    st.markdown("### 📷 Live Vision Shutter Engine & Photo Studio")
+    camera_picture = st.camera_input("Position the item or face in front of your lens:")
+    
+    if camera_picture:
+        st.success("📸 Picture snapshot taken successfully!")
+        raw_img = Image.open(camera_picture)
+        col_ed1, col_ed2 = st.columns([1, 2])
+        
+        with col_ed1:
+            st.markdown("#### 🛠️ Photo Editing Tools")
+            rotation = st.selectbox("Rotate Image:", [0, 90, 180, 240, 270])
+            resize_scale = st.slider("Resize Scale (%):", 10, 100, 100)
+            color_mode = st.radio("Apply Visual Filter:", ["Original Color", "Black & White (Grayscale)", "High Contrast Sepia"])
+            
+            edited_img = raw_img
+            if rotation != 0:
+                edited_img = edited_img.rotate(rotation, expand=True)
+            if resize_scale < 100:
+                new_w = int(edited_img.width * (resize_scale / 100.0))
+                new_h = int(edited_img.height * (resize_scale / 100.0))
+                edited_img = edited_img.resize((new_w, new_h))
+            if color_mode == "Black & White (Grayscale)":
+                edited_img = edited_img.convert("L")
+            elif color_mode == "High Contrast Sepia":
+                sepia_img = edited_img.convert("RGB")
+                pixels = sepia_img.load()
+                for y in range(sepia_img.height):
+                    for x in range(sepia_img.width):
+                        r, g, b = pixels[x, y]
+                        tr = int(0.393 * r + 0.769 * g + 0.189 * b)
+                        tg = int(0.349 * r + 0.686 * g + 0.168 * b)
+                        tb = int(0.272 * r + 0.534 * g + 0.131 * b)
+                        pixels[x, y] = (min(tr, 255), min(tg, 255), min(tb, 255))
+                edited_img = sepia_img
 
-    def make_feature_card(self, parent, title, text):
-        card = tk.Frame(parent, bg="#1f2937")
-        tk.Label(
-            card,
-            text=title,
-            bg="#1f2937",
-            fg="#f8fafc",
-            font=("Segoe UI", 13, "bold")
-        ).pack(anchor="w", padx=16, pady=(14, 4))
-        tk.Label(
-            card,
-            text=text,
-            bg="#1f2937",
-            fg="#94a3b8",
-            wraplength=500,
-            justify="left",
-            font=("Segoe UI", 10)
-        ).pack(anchor="w", padx=16, pady=(0, 14))
-        return card
-
-    # =========================
-    # HOME HELPERS
-    # =========================
-    def get_first_name(self, username):
-        if not username:
-            return "Champion"
-        cleaned = username.replace("_", " ").replace("-", " ").strip()
-        return cleaned.split()[0].title()
-
-    def get_user_greeting(self, username):
-        hour = datetime.now().hour
-        first_name = self.get_first_name(username)
-
-        if 5 <= hour < 12:
-            time_greeting = "Good morning"
-        elif 12 <= hour < 17:
-            time_greeting = "Good afternoon"
-        elif 17 <= hour < 22:
-            time_greeting = "Good evening"
-        else:
-            time_greeting = "Welcome back"
-
-        return f"{time_greeting}, {first_name}"
-
-    def create_stat_card(self, parent, title, value, subtext, color):
-        card = tk.Frame(parent, bg="#111827", bd=0, relief="flat")
-        tk.Frame(card, bg=color, height=5).pack(fill="x")
-        tk.Label(
-            card,
-            text=title,
-            bg="#111827",
-            fg="#94a3b8",
-            font=("Segoe UI", 11, "bold")
-        ).pack(anchor="w", padx=18, pady=(16, 6))
-        tk.Label(
-            card,
-            text=value,
-            bg="#111827",
-            fg="#f8fafc",
-            font=("Segoe UI", 20, "bold")
-        ).pack(anchor="w", padx=18)
-        tk.Label(
-            card,
-            text=subtext,
-            bg="#111827",
-            fg="#64748b",
-            font=("Segoe UI", 10)
-        ).pack(anchor="w", padx=18, pady=(4, 16))
-        return card
-
-    # =========================
-    # BEAUTIFUL HOME PAGE
-    # =========================
-    def show_home_page(self):
-        self.clear_screen()
-
-        self.home_frame = tk.Frame(self.root, bg="#08111f")
-        self.home_frame.pack(fill="both", expand=True)
-        self.current_frame = self.home_frame
-
-        username = self.logged_in_user if self.logged_in_user else "User"
-        greeting = self.get_user_greeting(username)
-        first_name = self.get_first_name(username)
-
-        top_bar = tk.Frame(self.home_frame, bg="#0b1628", height=82)
-        top_bar.pack(fill="x")
-        top_bar.pack_propagate(False)
-
-        brand_left = tk.Frame(top_bar, bg="#0b1628")
-        brand_left.pack(side="left", padx=28)
-
-        tk.Label(
-            brand_left,
-            text="JESUS_BOY CBT PORTAL",
-            bg="#0b1628",
-            fg="#38bdf8",
-            font=("Segoe UI", 14, "bold")
-        ).pack(anchor="w", pady=(14, 0))
-
-        tk.Label(
-            brand_left,
-            text="Professional Exam Practice Dashboard",
-            bg="#0b1628",
-            fg="#94a3b8",
-            font=("Segoe UI", 11)
-        ).pack(anchor="w")
-
-        user_right = tk.Frame(top_bar, bg="#0b1628")
-        user_right.pack(side="right", padx=20, pady=16)
-
-        tk.Label(
-            user_right,
-            text=f"Signed in as: {username}",
-            bg="#0b1628",
-            fg="#e2e8f0",
-            font=("Segoe UI", 11, "bold")
-        ).pack(anchor="e")
-
-        tk.Label(
-            user_right,
-            text="Ready to practice and improve",
-            bg="#0b1628",
-            fg="#64748b",
-            font=("Segoe UI", 10)
-        ).pack(anchor="e")
-
-        main = tk.Frame(self.home_frame, bg="#08111f")
-        main.pack(fill="both", expand=True, padx=28, pady=22)
-
-        hero = tk.Frame(main, bg="#0f1c32", height=185)
-        hero.pack(fill="x", pady=(0, 18))
-        hero.pack_propagate(False)
-
-        hero_left = tk.Frame(hero, bg="#0f1c32")
-        hero_left.pack(side="left", fill="both", expand=True, padx=28, pady=24)
-
-        tk.Label(
-            hero_left,
-            text=greeting,
-            bg="#0f1c32",
-            fg="#38bdf8",
-            font=("Segoe UI", 16, "bold")
-        ).pack(anchor="w")
-
-        tk.Label(
-            hero_left,
-            text=f"Welcome to your exam success hub, {first_name}.",
-            bg="#0f1c32",
-            fg="#f8fafc",
-            font=("Segoe UI", 28, "bold")
-        ).pack(anchor="w", pady=(8, 8))
-
-        tk.Label(
-            hero_left,
-            text="Choose an exam board, select a year, and begin timed practice in a beautiful focused workspace.",
-            bg="#0f1c32",
-            fg="#94a3b8",
-            wraplength=700,
-            justify="left",
-            font=("Segoe UI", 13)
-        ).pack(anchor="w", pady=(0, 12))
-
-        action_row = tk.Frame(hero_left, bg="#0f1c32")
-        action_row.pack(anchor="w", pady=(8, 0))
-
-        tk.Button(
-            action_row,
-            text="Open JAMB",
-            bg="#38bdf8",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=lambda: self.open_exam_main_page("JAMB")
-        ).pack(side="left", padx=(0, 10))
-
-        tk.Button(
-            action_row,
-            text="Open WAEC",
-            bg="#22c55e",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=lambda: self.open_exam_main_page("WAEC")
-        ).pack(side="left", padx=(0, 10))
-
-        tk.Button(
-            action_row,
-            text="Open NECO",
-            bg="#f59e0b",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=lambda: self.open_exam_main_page("NECO")
-        ).pack(side="left")
-
-        hero_right = tk.Frame(hero, bg="#13233f", width=280)
-        hero_right.pack(side="right", fill="y", padx=24, pady=22)
-        hero_right.pack_propagate(False)
-
-        tk.Label(
-            hero_right,
-            text="Today Focus",
-            bg="#13233f",
-            fg="#f8fafc",
-            font=("Segoe UI", 16, "bold")
-        ).pack(anchor="w", padx=18, pady=(18, 8))
-
-        tk.Label(
-            hero_right,
-            text="• Timed practice\n• Year-based revision\n• Professional dashboard\n• Simple, focused learning",
-            bg="#13233f",
-            fg="#cbd5e1",
-            justify="left",
-            font=("Segoe UI", 11)
-        ).pack(anchor="w", padx=18)
-
-        stats_row = tk.Frame(main, bg="#08111f")
-        stats_row.pack(fill="x", pady=(0, 18))
-
-        self.create_stat_card(stats_row, "Exam Boards", "3", "JAMB, WAEC, NECO", "#38bdf8").pack(side="left", fill="x", expand=True, padx=8)
-        self.create_stat_card(stats_row, "Practice Years", "7", "2019 to 2025 ready", "#22c55e").pack(side="left", fill="x", expand=True, padx=8)
-        self.create_stat_card(stats_row, "Mode", "Timed", "Every practice page includes a timer", "#f59e0b").pack(side="left", fill="x", expand=True, padx=8)
-        self.create_stat_card(stats_row, "Status", "Active", "You are signed in and ready", "#a855f7").pack(side="left", fill="x", expand=True, padx=8)
-
-        section_title = tk.Frame(main, bg="#08111f")
-        section_title.pack(fill="x", pady=(0, 10))
-
-        tk.Label(
-            section_title,
-            text="Choose Your Exam Practice",
-            bg="#08111f",
-            fg="#f8fafc",
-            font=("Segoe UI", 24, "bold")
-        ).pack(anchor="w")
-
-        tk.Label(
-            section_title,
-            text="Pick any exam board below and open a specific year for timed practice.",
-            bg="#08111f",
-            fg="#94a3b8",
-            font=("Segoe UI", 12)
-        ).pack(anchor="w", pady=(4, 0))
-
-        cards_wrap = tk.Frame(main, bg="#08111f")
-        cards_wrap.pack(fill="both", expand=True)
-
-        self.make_exam_card(
-            cards_wrap,
-            "JAMB Practice",
-            "Unified exam preparation with beautiful year access for mock and revision.",
-            "#38bdf8",
-            "JAMB"
-        ).pack(side="left", fill="both", expand=True, padx=10)
-
-        self.make_exam_card(
-            cards_wrap,
-            "WAEC Practice",
-            "Senior secondary exam practice with organized yearly questions and timed sessions.",
-            "#22c55e",
-            "WAEC"
-        ).pack(side="left", fill="both", expand=True, padx=10)
-
-        self.make_exam_card(
-            cards_wrap,
-            "NECO Practice",
-            "National exam revision with fast access, clean layout and timed practice.",
-            "#f59e0b",
-            "NECO"
-        ).pack(side="left", fill="both", expand=True, padx=10)
-
-        bottom_bar = tk.Frame(self.home_frame, bg="#0b1628", height=65)
-        bottom_bar.pack(fill="x", side="bottom")
-        bottom_bar.pack_propagate(False)
-
-        tk.Button(
-            bottom_bar,
-            text="Log Out",
-            bg="#ef4444",
-            fg="#f8fafc",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=self.show_auth_page
-        ).pack(side="left", padx=18, pady=12)
-
-        tk.Button(
-            bottom_bar,
-            text="Exit Full Screen",
-            bg="#334155",
-            fg="#f8fafc",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=lambda: self.root.attributes("-fullscreen", False)
-        ).pack(side="right", padx=18, pady=12)
-
-    def make_exam_card(self, parent, title, description, accent_color, exam_name):
-        card = tk.Frame(parent, bg="#111827", bd=0, relief="flat")
-
-        top = tk.Frame(card, bg="#111827")
-        top.pack(fill="x", padx=22, pady=(22, 10))
-
-        tk.Label(
-            top,
-            text=title,
-            bg="#111827",
-            fg="#f8fafc",
-            font=("Segoe UI", 20, "bold")
-        ).pack(anchor="w")
-
-        tk.Frame(card, bg=accent_color, height=5).pack(fill="x", padx=22, pady=(0, 16))
-
-        tk.Label(
-            card,
-            text=description,
-            bg="#111827",
-            fg="#94a3b8",
-            justify="left",
-            wraplength=320,
-            font=("Segoe UI", 12)
-        ).pack(anchor="w", padx=22, pady=(0, 18))
-
-        tk.Label(
-            card,
-            text="Available Years",
-            bg="#111827",
-            fg="#cbd5e1",
-            font=("Segoe UI", 12, "bold")
-        ).pack(anchor="w", padx=22, pady=(0, 12))
-
-        years_frame = tk.Frame(card, bg="#111827")
-        years_frame.pack(fill="x", padx=22)
-
-        years = ["2025", "2024", "2023", "2022", "2021"]
-        for i, year in enumerate(years):
-            btn = tk.Button(
-                years_frame,
-                text=year,
-                bg="#1e293b",
-                fg="#f8fafc",
-                activebackground=accent_color,
-                activeforeground="#0f172a",
-                font=("Segoe UI", 11, "bold"),
-                relief="flat",
-                bd=0,
-                padx=14,
-                pady=10,
-                cursor="hand2",
-                command=lambda e=exam_name, y=year: self.open_exam_year_page(e, y)
+        with col_ed2:
+            st.markdown("#### 🖼️ Live Output Workspace")
+            st.image(edited_img, caption="Edited Result Preview Target", use_container_width=True)
+            
+            img_buffer = io.BytesIO()
+            edited_img.save(img_buffer, format="PNG")
+            st.download_button(
+                label="📥 Download Edited Picture Asset",
+                data=img_buffer.getvalue(),
+                file_name="edited_snapped_photo.png",
+                mime="image/png",
+                use_container_width=True
             )
-            btn.grid(row=i // 2, column=i % 2, padx=6, pady=6, sticky="ew")
-
-        years_frame.grid_columnconfigure(0, weight=1)
-        years_frame.grid_columnconfigure(1, weight=1)
-
-        tk.Button(
-            card,
-            text=f"Open {exam_name} Dashboard",
-            bg=accent_color,
-            fg="#0f172a",
-            activebackground=accent_color,
-            activeforeground="#0f172a",
-            font=("Segoe UI", 12, "bold"),
-            relief="flat",
-            bd=0,
-            padx=16,
-            pady=13,
-            cursor="hand2",
-            command=lambda e=exam_name: self.open_exam_main_page(e)
-        ).pack(fill="x", padx=22, pady=(22, 24))
-
-        return card
-
-    # =========================
-    # EXAM DASHBOARD
-    # =========================
-    def open_exam_main_page(self, exam_name):
-        self.clear_screen()
-
-        page = tk.Frame(self.root, bg="#08111f")
-        page.pack(fill="both", expand=True)
-        self.current_frame = page
-
-        top = tk.Frame(page, bg="#0b1628", height=80)
-        top.pack(fill="x")
-        top.pack_propagate(False)
-
-        tk.Label(
-            top,
-            text=f"{exam_name} Practice Dashboard",
-            bg="#0b1628",
-            fg="#f8fafc",
-            font=("Segoe UI", 24, "bold")
-        ).pack(side="left", padx=28, pady=18)
-
-        tk.Button(
-            top,
-            text="Back to Home",
-            bg="#38bdf8",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=10,
-            cursor="hand2",
-            command=self.show_home_page
-        ).pack(side="right", padx=20, pady=16)
-
-        main = tk.Frame(page, bg="#08111f")
-        main.pack(fill="both", expand=True, padx=28, pady=24)
-
-        hero = tk.Frame(main, bg="#0f1c32", height=140)
-        hero.pack(fill="x", pady=(0, 20))
-        hero.pack_propagate(False)
-
-        tk.Label(
-            hero,
-            text=f"Choose a year for {exam_name}",
-            bg="#0f1c32",
-            fg="#f8fafc",
-            font=("Segoe UI", 28, "bold")
-        ).pack(anchor="w", padx=26, pady=(28, 6))
-
-        tk.Label(
-            hero,
-            text=f"Every {exam_name} practice page includes a running timer so you can build exam speed and discipline.",
-            bg="#0f1c32",
-            fg="#94a3b8",
-            font=("Segoe UI", 13)
-        ).pack(anchor="w", padx=26)
-
-        year_wrap = tk.Frame(main, bg="#08111f")
-        year_wrap.pack(pady=10)
-
-        years = ["2025", "2024", "2023", "2022", "2021", "2020", "2019"]
-        for index, year in enumerate(years):
-            btn = tk.Button(
-                year_wrap,
-                text=year,
-                bg="#111827",
-                fg="#f8fafc",
-                activebackground="#38bdf8",
-                activeforeground="#0f172a",
-                font=("Segoe UI", 14, "bold"),
-                relief="flat",
-                bd=0,
-                padx=34,
-                pady=22,
-                width=14,
-                cursor="hand2",
-                command=lambda e=exam_name, y=year: self.open_exam_year_page(e, y)
-            )
-            btn.grid(row=index // 3, column=index % 3, padx=14, pady=14)
-
-    # =========================
-    # PRACTICE TIMER
-    # =========================
-    def format_time(self, total_seconds):
-        mins = total_seconds // 60
-        secs = total_seconds % 60
-        hours = mins // 60
-        mins = mins % 60
-        return f"{hours:02d}:{mins:02d}:{secs:02d}"
-
-    def start_practice_timer(self):
-        self.practice_timer_running = True
-        self.update_practice_timer()
-
-    def update_practice_timer(self):
-        if not self.practice_timer_running:
-            return
-
-        self.practice_timer_seconds += 1
-
-        if hasattr(self, "practice_timer_label") and self.practice_timer_label.winfo_exists():
-            self.practice_timer_label.config(
-                text=self.format_time(self.practice_timer_seconds)
-            )
-
-        self.practice_timer_job = self.root.after(1000, self.update_practice_timer)
-
-    def reset_practice_timer(self):
-        self.practice_timer_seconds = 0
-        if hasattr(self, "practice_timer_label") and self.practice_timer_label.winfo_exists():
-            self.practice_timer_label.config(text="00:00:00")
-
-    # =========================
-    # EXAM YEAR PAGE
-    # =========================
-    def open_exam_year_page(self, exam_name, year):
-        self.clear_screen()
-
-        self.current_exam_name = exam_name
-        self.current_exam_year = year
-
-        page = tk.Frame(self.root, bg="#08111f")
-        page.pack(fill="both", expand=True)
-        self.current_frame = page
-
-        top = tk.Frame(page, bg="#0b1628", height=84)
-        top.pack(fill="x")
-        top.pack_propagate(False)
-
-        left_top = tk.Frame(top, bg="#0b1628")
-        left_top.pack(side="left", padx=24, pady=12)
-
-        tk.Label(
-            left_top,
-            text=f"{exam_name} {year}",
-            bg="#0b1628",
-            fg="#f8fafc",
-            font=("Segoe UI", 24, "bold")
-        ).pack(anchor="w")
-
-        tk.Label(
-            left_top,
-            text="Timed practice workspace",
-            bg="#0b1628",
-            fg="#94a3b8",
-            font=("Segoe UI", 11)
-        ).pack(anchor="w")
-
-        timer_box = tk.Frame(top, bg="#13233f", padx=18, pady=10)
-        timer_box.pack(side="right", padx=20, pady=14)
-
-        tk.Label(
-            timer_box,
-            text="Practice Timer",
-            bg="#13233f",
-            fg="#94a3b8",
-            font=("Segoe UI", 10, "bold")
-        ).pack()
-
-        self.practice_timer_label = tk.Label(
-            timer_box,
-            text="00:00:00",
-            bg="#13233f",
-            fg="#22c55e",
-            font=("Consolas", 20, "bold")
+        
+        st.write("---")
+        st.markdown("#### 🔬 AI Vision Analysis & Context Insights")
+        vision_instruction = st.text_input(
+            "What information would you like the AI to extract or evaluate about this item?", 
+            value="Examine what this object/document is and provide an operational or industrial breakdown profile."
         )
-        self.practice_timer_label.pack()
+        
+        if st.button("🔍 Run Diagnostic Image Analysis", use_container_width=True):
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            vision_analysis = query_standalone_engine(
+                f"The user has captured an asset photo measuring {edited_img.width}x{edited_img.height} pixels using color filter template '{color_mode}'. "
+                f"Based on their prompt request: '{vision_instruction}', provide an extensive professional evaluation, technical specification insights, "
+                f"and strategic recommendations written in language {st.session_state.lang} reflecting 2026 guidelines."
+            )
+            st.markdown(f"<div class='feature-card'><h4>📡 Vision Node Diagnostic Report:</h4><br>{vision_analysis}</div>", unsafe_allow_html=True)
+    st.stop()
 
-        main = tk.Frame(page, bg="#08111f")
-        main.pack(fill="both", expand=True, padx=28, pady=22)
+# SCREEN 3: BILLING METHOD & LICENSE EXTENSION PORTAL
+elif st.session_state.active_view == "BILLING":
+    st.markdown("<div class='cyber-logo'>💳 CORE BILLING NODES & LICENSE ACCELERATOR</div>", unsafe_allow_html=True)
+    st.caption("Provision Payments, Redeem Structural Activation Invoices, and View Account Lifespan Matrices")
+    
+    if st.button("🏠 Return to System Dashboard", use_container_width=True):
+        st.session_state.active_view = "HOME"
+        st.rerun()
+        
+    st.write("---")
+    
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        st.markdown("### 📊 Active Subscription Parameter Metrics")
+        user_meta_profile = load_admin_metrics().get(encode_cred(st.session_state.current_user), {})
+        
+        st.write(f"**Account Identity Space:** {st.session_state.current_user}")
+        st.write(f"**Current Structural Tier Status:** `{user_meta_profile.get('payment_status', 'Unpaid')}`")
+        st.write(f"**Computation Lifespan End Threshold:** `{user_meta_profile.get('license_expiry', 'N/A')}`")
+        
+    with col_b2:
+        st.markdown("<div class='billing-card'>", unsafe_allow_html=True)
 
-        intro = tk.Frame(main, bg="#0f1c32", height=120)
-        intro.pack(fill="x", pady=(0, 18))
-        intro.pack_propagate(False)
+    st.markdown(
+        "<h4>👑 Upgrade to Unlimited Sovereign Space</h4>",
+        unsafe_allow_html=True
+    )
 
-        tk.Label(
-            intro,
-            text=f"{exam_name} {year} Practice Center",
-            bg="#0f1c32",
-            fg="#f8fafc",
-            font=("Segoe UI", 26, "bold")
-        ).pack(anchor="w", padx=24, pady=(24, 6))
+    st.write(
+        "Unlock unrestricted model context pipelines, unlimited local "
+        "vector database indices, and premium risk tools.\n\n"
+        "📞 Contact Management: +2348024300891\n"
+        "For activation codes and payment bank details. Thank you."
+    )
 
-        tk.Label(
-            intro,
-            text="Select a section below to begin timed objective, theory, study notes or mock practice.",
-            bg="#0f1c32",
-            fg="#94a3b8",
-            font=("Segoe UI", 12)
-        ).pack(anchor="w", padx=24)
+    st.markdown(
+        """
+        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
+        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
+        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
+        """,
+        unsafe_allow_html=True
+    )
 
-        panel = tk.Frame(main, bg="#08111f")
-        panel.pack(fill="both", expand=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+        
+    st.write("---")
+    st.markdown("### 🔑 Apply New Strategic License Token Override")
+    manual_invoice_pin = st.text_input("Input Generated Administration Activation Key (PIN):", placeholder="e.g., VK-XXXX-XXXX")
+    if st.button("🔓 Submit Registration Renewal Block", use_container_width=True):
+        if manual_invoice_pin.strip() != "":
+            pins_database = load_pins()
+            if manual_invoice_pin in pins_database and pins_database[manual_invoice_pin]["status"] == "Unused":
+                pin_info = pins_database[manual_invoice_pin]
+                user_hashed_key = encode_cred(st.session_state.current_user)
+                all_metrics = load_admin_metrics()
+                
+                pins_database[manual_invoice_pin]["status"] = "Claimed"
+                pins_database[manual_invoice_pin]["claimed_by"] = st.session_state.current_user
+                save_pins(pins_database)
+                
+                if pin_info["is_forever"]:
+                    all_metrics[user_hashed_key]["payment_status"] = "Paid"
+                else:
+                    added_days = pin_info["days_allotted"]
+                    current_exp_str = all_metrics[user_hashed_key].get("license_expiry")
+                    
+                    if current_exp_str and datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S") > datetime.now():
+                        base_datetime = datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S")
+                    else:
+                        base_datetime = datetime.now()
+                        
+                    new_computed_exp = base_datetime + timedelta(days=added_days)
+                    all_metrics[user_hashed_key]["license_expiry"] = new_computed_exp.strftime("%Y-%m-%d %H:%M:%S")
+                    all_metrics[user_hashed_key]["payment_status"] = "Unpaid"
+                    
+                save_admin_metrics(all_metrics)
+                st.success("🎉 Matrix Timeline Extension Applied! Click below to return.")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("🚨 Specified verification key index string is invalid or already consumed.")
+    st.stop()
 
-        items = [
-            (f"{exam_name} {year} Objective Questions", "#38bdf8"),
-            (f"{exam_name} {year} Theory Questions", "#22c55e"),
-            (f"{exam_name} {year} Study Notes", "#f59e0b"),
-            (f"{exam_name} {year} Timed Mock Practice", "#a855f7")
-        ]
+# SCREEN 4: MASTER DASHBOARD BASE PLATFORM
+st.markdown(f"<div class='cyber-logo'>{tr['title']}</div>", unsafe_allow_html=True)
+st.write("---")
 
-        for item, color in items:
-            row = tk.Frame(panel, bg="#111827", height=82)
-            row.pack(fill="x", pady=8)
-            row.pack_propagate(False)
+st.markdown("### 🚀 Dynamic Workspace Hot-Keys")
+col_panel1, col_panel2, col_panel3 = st.columns(3)
+with col_panel1:
+    if st.button("📝 Open Fullscreen Resizable Notepad Engine", use_container_width=True):
+        st.session_state.active_view = "NOTEPAD"
+        st.rerun()
+with col_panel2:
+    if st.button("🎨 Open Camera Snap & AI Image Content Foundry", use_container_width=True):
+        st.session_state.active_view = "FOUNDRY"
+        st.rerun()
+with col_panel3:
+    if st.button("💳 Open Billing & Subscription Ledger", use_container_width=True):
+        st.session_state.active_view = "BILLING"
+        st.rerun()
 
-            color_bar = tk.Frame(row, bg=color, width=7)
-            color_bar.pack(side="left", fill="y")
+st.write("---")
 
-            content = tk.Frame(row, bg="#111827")
-            content.pack(side="left", fill="both", expand=True, padx=18, pady=14)
+st.subheader(tr["search_title"])
+with st.container():
+    col_s1, col_s2 = st.columns([3, 1])
+    with col_s1: search_item = st.text_input("Look up global commodity pricing:", placeholder=tr["search_ph"], key="g_search_bar")
+    with col_s2: target_currency = st.text_input(tr["curr_lbl"], value="₦ (NGN)", key="g_curr_bar")
+    
+    if st.button(tr["search_btn"], use_container_width=True):
+        if search_item.strip() != "":
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            res = query_standalone_engine(f"As an economy analyst, find the current global market pricing of '{search_item}' and convert it into {target_currency}. Provide a detailed breakdown in {st.session_state.lang} reflecting 2026 insights.")
+            st.markdown(f"<div class='feature-card'><b>{tr['orac_res']}</b><br><br>{res}</div>", unsafe_allow_html=True)
 
-            tk.Label(
-                content,
-                text=item,
-                bg="#111827",
-                fg="#f8fafc",
-                font=("Segoe UI", 14, "bold")
-            ).pack(anchor="w")
+st.write("---")
+uploaded_files = st.file_uploader(tr["upload_lbl"], type=["pdf"], accept_multiple_files=True)
 
-            tk.Label(
-                content,
-                text="Open this practice section and continue with the running timer.",
-                bg="#111827",
-                fg="#94a3b8",
-                font=("Segoe UI", 10)
-            ).pack(anchor="w", pady=(4, 0))
+if uploaded_files:
+    if 'document_dict' not in st.session_state or len(st.session_state.document_dict) != len(uploaded_files):
+        parsed_docs = {}
+        full_raw_text = ""
+        for file in uploaded_files:
+            text_accumulator = ""
+            try:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text: text_accumulator += page_text + "\n"
+                parsed_docs[file.name] = text_accumulator
+                full_raw_text += text_accumulator + "\n"
+            except Exception as e: st.error(f"Error on {file.name}: {str(e)}")
+        st.session_state.document_dict = parsed_docs
+        st.session_state.raw_context = full_raw_text
+        st.toast(tr["success_ac"], icon="🔥")
 
-            tk.Button(
-                row,
-                text="Open",
-                bg=color,
-                fg="#0f172a",
-                font=("Segoe UI", 11, "bold"),
-                relief="flat",
-                bd=0,
-                padx=18,
-                pady=10,
-                cursor="hand2",
-                command=lambda n=item: self.open_placeholder(n)
-            ).pack(side="right", padx=18)
+context_ready = 'raw_context' in st.session_state and st.session_state.raw_context.strip() != ""
 
-        btn_wrap = tk.Frame(main, bg="#08111f")
-        btn_wrap.pack(fill="x", pady=(12, 0))
+if module_selection == tr["comp_panel"]:
+    st.subheader(tr["comp_panel"])
+    with st.expander("🛠 Rose Graph Configuration Studio", expanded=True):
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            chart_type = st.selectbox("Select Display Style:", ["Line Chart", "Bar Chart", "Area Chart"])
+            x_label = st.text_input("Label X-Axis:", value="Timeline")
+        with col_g2:
+            y_label = st.text_input("Label Y-Axis:", value="Performance")
+            custom_data_points = st.text_input(tr["metrics_lbl"], value="10, 25, 18, 35, 42, 38, 50")
+    try:
+        data_list = [float(i.strip()) for i in custom_data_points.split(",") if i.strip() != ""]
+        chart_data = pd.DataFrame({x_label: range(1, len(data_list) + 1), y_label: data_list}).set_index(x_label)
+        if chart_type == "Line Chart": st.line_chart(chart_data)
+        elif chart_type == "Bar Chart": st.bar_chart(chart_data)
+        elif chart_type == "Area Chart": st.area_chart(chart_data)
+    except: st.error("🚨 Formatting Error.")
 
-        tk.Button(
-            btn_wrap,
-            text="Reset Timer",
-            bg="#f59e0b",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=11,
-            cursor="hand2",
-            command=self.reset_practice_timer
-        ).pack(side="left", padx=(0, 8))
+elif module_selection == tr["oracle_chat"]:
+    st.subheader(tr["oracle_chat"])
+    user_query = st.text_input("Query data context:", placeholder="What are our core operational findings?")
+    if user_query:
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Context:\n{st.session_state.raw_context[:4000]}\n\nQuestion: {user_query}\nAnswer in language {st.session_state.lang}:"
+            reply = query_standalone_engine(prompt)
+            st.session_state.chat_history.append((user_query, reply))
+            save_history(st.session_state.current_user, "chat", st.session_state.chat_history)
+    if st.session_state.get("chat_history"):
+        for q, a in reversed(st.session_state.chat_history):
+            st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b><br>{a}</div>", unsafe_allow_html=True)
 
-        tk.Button(
-            btn_wrap,
-            text="Back to Home",
-            bg="#38bdf8",
-            fg="#0f172a",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=11,
-            cursor="hand2",
-            command=self.show_home_page
-        ).pack(side="left", padx=8)
+elif module_selection == tr["exec_brief"]:
+    st.subheader(tr["exec_brief"])
+    if st.button(tr["run_diag"], use_container_width=True):
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Using this text context:\n{st.session_state.raw_context[:4000]}\n\nProvide an executive briefing in language {st.session_state.lang}: 3 bullet summaries, key risk factors, and deadlines."
+            st.session_state.briefing_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "briefing", st.session_state.briefing_store)
+    if st.session_state.get("briefing_store"): st.markdown(f"<div class='feature-card'>{st.session_state.briefing_store}</div>", unsafe_allow_html=True)
 
-        tk.Button(
-            btn_wrap,
-            text=f"Back to {exam_name}",
-            bg="#334155",
-            fg="#f8fafc",
-            font=("Segoe UI", 11, "bold"),
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=11,
-            cursor="hand2",
-            command=lambda e=exam_name: self.open_exam_main_page(e)
-        ).pack(side="left", padx=8)
+elif module_selection == tr["composer"]:
+    st.subheader(tr["composer"])
+    style = st.selectbox("Style:", ["Professional Email", "Formal Memorandum", "Slack Alert"])
+    notes = st.text_input("Special requests:", placeholder="Keep it direct.")
+    if st.button(tr["calc_btn"], use_container_width=True):
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Context:\n{st.session_state.raw_context[:4000]}\n\nCompose a {style} in language {st.session_state.lang}. Special Instruction: {notes}"
+            st.session_state.draft_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "draft", st.session_state.draft_store)
+    if st.session_state.get("draft_store"): st.markdown(f"<div class='feature-card'>{st.session_state.draft_store}</div>", unsafe_allow_html=True)
 
-        self.reset_practice_timer()
-        self.start_practice_timer()
+elif module_selection == tr["extractor"]:
+    st.subheader(tr["extractor"])
+    target = st.text_input("Data to mine:", value="Names, Dates, Key Figures")
+    if st.button(tr["calc_btn"], use_container_width=True):
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Context text:\n{st.session_state.raw_context[:4000]}\n\nExtract all information relating to {target} in language {st.session_state.lang}."
+            st.session_state.structure_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "structure", st.session_state.structure_store)
+    if st.session_state.get("structure_store"): st.markdown(f"<div class='feature-card'>{st.session_state.structure_store}</div>", unsafe_allow_html=True)
 
-    def open_placeholder(self, title):
-        messagebox.showinfo("Coming Next", f"{title} page will open here when you connect your question database.")
+elif module_selection == tr["cross_file"]:
+    st.subheader(tr["cross_file"])
+    if not context_ready or len(st.session_state.get('document_dict', {})) < 2:
+        st.warning("⚠️ Cross-File operations require at least two PDF files uploaded simultaneously.")
+    else:
+        audit_query = st.text_input("Audit Query:", value="Are there contradictions across these items?")
+        if st.button(tr["calc_btn"], use_container_width=True):
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            aggregated_context = ""
+            for name, content in st.session_state.document_dict.items(): aggregated_context += f"--- FILE: {name} ---\n{content[:2000]}\n"
+            prompt = f"Analyze these files in language {st.session_state.lang} for contradictions:\n{aggregated_context}\nDirective: {audit_query}"
+            st.session_state.cross_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "cross", st.session_state.cross_store)
+    if st.session_state.get("cross_store"): st.markdown(f"<div class='feature-card'>{st.session_state.cross_store}</div>", unsafe_allow_html=True)
 
+elif module_selection == tr["tracker"]:
+    st.subheader(tr["tracker"])
+    if st.button(tr["calc_btn"], use_container_width=True):
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Extract timelines and task actions in language {st.session_state.lang} from:\n{st.session_state.raw_context[:4000]}"
+            st.session_state.tracker_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "tracker", st.session_state.tracker_store)
+    if st.session_state.get("tracker_store"): st.markdown(f"<div class='feature-card'>{st.session_state.tracker_store}</div>", unsafe_allow_html=True)
 
-root = tk.Tk()
-app = CBTStudyApp(root)
-root.mainloop()
+elif module_selection == tr["sandbox"]:
+    st.subheader(tr["sandbox"])
+    idea = st.text_area("Drop design concept matrix coordinates:")
+    if st.button(tr["calc_btn"], use_container_width=True) and idea:
+        st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+        prompt = f"Act as an expert risk auditor. Stress-test this business idea in language {st.session_state.lang}: '{idea}'"
+        st.session_state.sandbox_store = query_standalone_engine(prompt)
+        save_history(st.session_state.current_user, "sandbox", st.session_state.sandbox_store)
+    if st.session_state.get("sandbox_store"): st.markdown(f"<div class='feature-card'>{st.session_state.sandbox_store}</div>", unsafe_allow_html=True)
+
+elif module_selection == tr["predictor"]:
+    st.subheader(tr["predictor"])
+    project_brief = st.text_area("Describe the project scope & technical requirements:")
+    col_cfg1, col_cfg2 = st.columns(2)
+    with col_cfg1: tier_profile = st.selectbox("Strategy Profile:", ["Lean Bootstrap Strategy", "Standard Competitive Infrastructure", "Aggressive Scale Enterprise"])
+    with col_cfg2: contingency_buffer = st.slider("Buffer (%):", 5, 30, 15)
+    if st.button(tr["calc_btn"], use_container_width=True) and project_brief:
+        st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+        prompt = f"Act as a tech project architect. Analyze brief: '{project_brief}'. Strategy: {tier_profile} with {contingency_buffer}% buffer. Report structural ranges using currency {target_currency} written in language {st.session_state.lang}."
+        st.session_state.predictor_store = query_standalone_engine(prompt)
+        save_history(st.session_state.current_user, "predictor", st.session_state.predictor_store)
+    if st.session_state.get("predictor_store"): st.markdown(f"<div class='feature-card'>{st.session_state.predictor_store}</div>", unsafe_allow_html=True)
+
+elif module_selection == tr["indexer"]:
+    st.subheader(tr["indexer"])
+    if st.button(tr["calc_btn"], use_container_width=True):
+        if not context_ready: st.error(tr["error_ingest"])
+        else:
+            st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+            prompt = f"Generate a technical index and metadata taxonomy tags in language {st.session_state.lang} for:\n{st.session_state.raw_context[:4000]}"
+            st.session_state.indexer_store = query_standalone_engine(prompt)
+            save_history(st.session_state.current_user, "indexer", st.session_state.indexer_store)
+    if st.session_state.get("indexer_store"): st.markdown(f"<div class='feature-card'>{st.session_state.indexer_store}</div>", unsafe_allow_html=True)
+
+elif module_selection == tr["runway_plan"]:
+    st.subheader(tr["runway_plan"])
+    financial_doc = st.file_uploader("Upload Revenue Statement (PDF)", type=["pdf"])
+    total_liabilities = st.number_input("Enter Total Expenses/Liabilities:", value=0, step=100)
+    if st.button(tr["calc_btn"], use_container_width=True):
+        revenue_text = ""
+        if financial_doc:
+            pdf_read = PyPDF2.PdfReader(financial_doc)
+            for page in pdf_read.pages:
+                t = page.extract_text()
+                if t: revenue_text += t + "\n"
+        st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+        prompt = f"Act as a virtual corporate CFO. Statement: '{revenue_text[:2000]}'. Expenses: {total_liabilities} in {target_currency}. Map items sold, calculate net remainder growth capital, and list step-by-step optimization tactics in language {st.session_state.lang}."
+        st.session_state.runway_store = query_standalone_engine(prompt)
+        save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
+    if st.session_state.get("runway_store"): st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
+
+st.write("---")
+st.markdown("## 💎 Premium Asset Allocation & Macro Shock Simulator")
+st.caption("Strategic Decision Engine for High-Net-Worth Portfolios and Enterprise Capital")
+
+with st.container():
+    col_inv1, col_inv2, col_inv3 = st.columns(3)
+    with col_inv1:
+        liquidity_reserve = st.number_input("Core Capital Reserve ($)", value=50000000, step=5000000)
+        venture_allocation = st.slider("Venture & Growth Allocation (%)", 0, 100, 25)
+    with col_inv2:
+        commodity_hedge = st.slider("Commodity & Hard Asset Hedge (%)", 0, 100, 15)
+        yield_target = st.slider("Target Internal Rate of Return (IRR %)", 5, 45, 18)
+    with col_inv3:
+        macro_shock_scenario = st.selectbox("Simulate Global Macro Economic Shock:", [
+            "Baseline Stable Growth Economy",
+            "Severe Global Supply Chain Disruption",
+            "Rapid Hyper-Inflationary Surge",
+            "Aggressive Interest Rate Hikes"
+        ])
+
+    if st.button("⚡ Run Portfolio Stress-Test & Core Diagnostics", use_container_width=True):
+        st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+        
+        growth_cap = liquidity_reserve * (venture_allocation / 100.0)
+        hedge_cap = liquidity_reserve * (commodity_hedge / 100.0)
+        conservative_remainder = liquidity_reserve - (growth_cap + hedge_cap)
+        
+        simulation_prompt = f"""
+        Act as an elite sovereign wealth fund strategist and risk auditor. 
+        Analyze the following corporate asset matrix:
+        - Total Liquid Capital: ${liquidity_reserve:,}
+        - Growth/Venture Risk Exposure: {venture_allocation}% (${growth_cap:,})
+        - Commodity/Hedge Safeguard: {commodity_hedge}% (${hedge_cap:,})
+        - Secure Cash/Yield Remainder: ${conservative_remainder:,}
+        - Target Yield Expectation: {yield_target}%
+        
+        The user has initiated a stress-test against this specific macro environment: '{macro_shock_scenario}'.
+        Provide an executive threat assessment, determine if the target IRR is mathematically viable under this shock, and outline the exact capital reallocation adjustments required to insulate this wealth.
+        """
+        risk_analysis = query_standalone_engine(simulation_prompt)
+        st.markdown(f"<div class='feature-card'><h3>📊 Tactical Risk Matrix Diagnostic Output</h3><br>{risk_analysis}</div>", unsafe_allow_html=True)
+        
+        allocation_metrics = pd.DataFrame({
+            "Asset Pillars": ["Venture Growth", "Hard Asset Hedge", "Conservative Cash"],
+            "Capital Allocation ($)": [growth_cap, hedge_cap, conservative_remainder]
+        }).set_index("Asset Pillars")
+        st.bar_chart(allocation_metrics)
