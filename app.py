@@ -166,7 +166,7 @@ current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
 # Secure API Auto-Engine Connection
-st.session_state.groq_key = "YOUR_PASTED_GROQ_KEY_HERE"
+st.session_state.groq_key = "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"
 client = Groq(api_key=st.session_state.groq_key)
 
 if "lang" not in st.session_state: st.session_state.lang = "English"
