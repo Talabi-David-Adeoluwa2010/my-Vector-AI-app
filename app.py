@@ -865,5 +865,3 @@ with st.container():
             "Capital Allocation ($)": [growth_cap, hedge_cap, conservative_remainder]
         }).set_index("Asset Pillars")
         st.bar_chart(allocation_metrics)
-        }).set_index("Asset Pillars")
-        st.bar_chart(allocation_metrics)
