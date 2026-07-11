@@ -141,6 +141,23 @@ LANG_DATA = {
         "run_diag": "⚡ Run System Diagnostic Engine", "error_ingest": "🚨 Ingestion Missing: Drop asset documents into the workspace first.",
         "calc_btn": "📊 Calculate Parameters", "success_ac": "⚡ Data Accelerator updated successfully!",
         "save_fn": "Save As (Filename):", "dl_lbl": "📥 Save As (Download File)", "metrics_lbl": "Enter comma-separated metric values:"
+    },
+    "Français": {
+        "title": "⚡ VEKTOR.AI // Matrice de Nœuds Multi-Agents", 
+        "gate_title": "SHELL LOCAL SÉCURISÉ — PORTAIL D'ESPACE PERSONNEL",
+        "signin": "🔐 Se Connecter", "register": "🛠️ Enregistrer un Espace", "username": "Nom d'utilisateur de Sécurité",
+        "password": "Mot de Passe d'Accès", "btn_auth": "Autoriser l'Accès", "btn_reg": "Créer un Espace Masqué",
+        "nav_lbl": "Sélectionner le Moteur Opérationnel:", "clear_cache": "Effacer le Cache Data 🗑️", "logout": "Terminer la Session 🔓",
+        "search_title": "🌐 Oracle des Coûts des Matières Premières & Conversion", "search_btn": "🔍 Chercher le Coût",
+        "search_ph": "ex. 1 sac de ciment, baril de pétrole brut, prix du riz au tonne", "curr_lbl": "Symbole Devise Cible:",
+        "upload_lbl": "Charger des Documents de Connaissance d'Entreprise (PDF)", "orac_res": "🌐 Résultat de l'Oracle de Prix:",
+        "comp_panel": "📊 Panneau de Progrès d'Entreprise", "oracle_chat": "💬 Chat Contexte Oracle", "exec_brief": "📝 Moteur de Briefing Exécutif",
+        "composer": "✉️ Compositeur de Projet Contextuel", "extractor": "📊 Extracteur de Données Structurelles", "cross_file": "🔍 Intelligence Multi-Fichiers",
+        "tracker": "📅 Suivi des Tâches & Jalons", "sandbox": "💡 Bac à Sable Remue-Méninges", "predictor": "💸 Prédiction de Ressources",
+        "indexer": "🗂️ Indexeur de Base de Connaissances", "runway_plan": "🛡️ Planificateur de Trésorerie & Réinvestissement",
+        "run_diag": "⚡ Lancer le Diagnostic Système", "error_ingest": "🚨 Ingestion Manquante: Déposez les documents d'actifs d'abord.",
+        "calc_btn": "📊 Calculer les Paramètres", "success_ac": "⚡ Accélérateur de données mis à jour!",
+        "save_fn": "Enregistrer sous (Nom du fichier):", "dl_lbl": "📥 Télécharger le fichier", "metrics_lbl": "Entrez les valeurs séparées par des virgules:"
     }
 }
 
@@ -160,17 +177,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# GLOBAL PERSISTENT LANGUAGE SELECTION GRID
+# ==========================================
+col_lang1, col_lang2 = st.columns([3, 1])
+with col_lang2:
+    selected_language = st.selectbox("🌐 GLOBAL TRANSLATION LANGUAGE", ["English", "Français"], index=0, key="global_lang_selection_bar")
+    st.session_state.lang = selected_language
+
+tr = LANG_DATA.get(st.session_state.lang, LANG_DATA["English"])
+
 # PINNED LIVE CLOCK
-clock_placeholder = st.empty()
-current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
+with col_lang1:
+    clock_placeholder = st.empty()
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
 # Secure API Auto-Engine Connection
 st.session_state.groq_key = "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"
 client = Groq(api_key=st.session_state.groq_key)
-
-if "lang" not in st.session_state: st.session_state.lang = "English"
-tr = LANG_DATA["English"]
 
 if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
 
