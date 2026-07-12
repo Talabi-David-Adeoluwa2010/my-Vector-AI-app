@@ -163,10 +163,10 @@ LANG_DATA = {
 }
 
 st.set_page_config(
-    page_title="Vektor AI", 
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Vektor AI",
+    page_icon="playstore.png"
 )
+
 
 st.markdown("""
     <style>
