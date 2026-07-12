@@ -163,8 +163,40 @@ LANG_DATA = {
 
 st.set_page_config(page_title="Vektor AI", layout="wide")
 
+st.set_page_config(page_title="Vektor AI", layout="wide")
+
 st.markdown("""
     <style>
+    /* Completely eliminate the top Streamlit header bar (Fork button, search, etc.) */
+    header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0px !important;
+        visibility: hidden !important;
+    }
+    
+    /* Hide the default options hamburger menu */
+    #MainMenu { 
+        visibility: hidden !important; 
+        display: none !important; 
+    }
+    
+    /* Obliterate the bottom right connection status / developer toolbar (Kitten emoji, crown) */
+    div[data-testid="stStatusWidget"], 
+    .stStatusWidget, 
+    [data-testid="stDecoration"],
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+        height: 0px !important;
+    }
+    
+    /* Adjust page container padding so nothing looks cut off after hiding elements */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+    
+    /* Core App styling constants */
     .stApp { background: linear-gradient(135deg, #05070f 0%, #0c0f1d 100%); color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .cyber-logo { font-size: 3.2rem; font-weight: 900; background: linear-gradient(90deg, #00f2fe, #4facfe, #00f2fe); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; font-family: 'Courier New', Courier, monospace; }
     .scanning-line { width: 100%; height: 4px; background: linear-gradient(90deg, transparent, #00f2fe, #4facfe, transparent); background-size: 200% 100%; animation: scanMove 2s linear infinite; margin-bottom: 20px; }
@@ -176,6 +208,7 @@ st.markdown("""
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
+
 
 # ==========================================
 # GLOBAL PERSISTENT LANGUAGE SELECTION GRID
