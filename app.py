@@ -162,24 +162,20 @@ LANG_DATA = {
     }
 }
 
-# FORCED CONFIGURATION FOR PERMANENT DARK MODE
 st.set_page_config(
     page_title="Vektor AI", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Apply global app background colors directly through css injection override
 st.markdown("""
     <style>
-    /* Force dynamic theme defaults to dark styling directly via CSS */
     :root {
         --background-color: #05070f;
         --secondary-background-color: #121626;
         --text-color: #e2e8f0;
     }
     
-    /* Re-enable display of top header containers & sidebar items on mobile viewports */
     header[data-testid="stHeader"], 
     [data-testid="stHeader"],
     .stHeader {
@@ -188,26 +184,26 @@ st.markdown("""
         background-color: #05070f !important;
     }
     
-    /* Restore visibility parameters for sidebar control chevrons on mobile lenses */
     [data-testid="sidebar-toggle"] {
         visibility: visible !important;
         display: block !important;
     }
     
-    /* Reset main interface padding boundaries */
+    /* Increased top padding boundary to prevent header and menu from overlapping content */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 3.5rem !important;
         padding-bottom: 1rem !important;
     }
     
-    /* Core App design matrix layout constants */
     .stApp { background: linear-gradient(135deg, #05070f 0%, #0c0f1d 100%); color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .cyber-logo { font-size: 3.2rem; font-weight: 900; background: linear-gradient(90deg, #00f2fe, #4facfe, #00f2fe); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; font-family: 'Courier New', Courier, monospace; }
     .scanning-line { width: 100%; height: 4px; background: linear-gradient(90deg, transparent, #00f2fe, #4facfe, transparent); background-size: 200% 100%; animation: scanMove 2s linear infinite; margin-bottom: 20px; }
     @keyframes scanMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div, .stNumberInput>div>div>input { background-color: #121626 !important; color: #ffffff !important; border: 1px solid #1f293d !important; border-radius: 10px !important; }
     .feature-card { background: rgba(18, 22, 38, 0.6); border: 1px solid #1f293d; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.05); }
-    .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-bottom: 15px; }
+    
+    /* Added top margin cushion to push the clock cleanly below top bar controls */
+    .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-top: 10px; margin-bottom: 15px; }
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
@@ -407,7 +403,6 @@ if user_encoded_key in metrics_db:
         exp_datetime = datetime.strptime(exp_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
         time_delta = exp_datetime - datetime.now(ZoneInfo('Africa/Lagos'))
         
-        # Display dynamic status banners on top of operational dashboard
         if payment_status != "Paid":
             if time_delta.total_seconds() > 0:
                 hours_left = int(time_delta.total_seconds() // 3600)
