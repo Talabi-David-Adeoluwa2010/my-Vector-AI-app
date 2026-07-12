@@ -5,6 +5,7 @@ import json
 import base64
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import pandas as pd
 from groq import Groq
 from PIL import Image
@@ -103,7 +104,7 @@ def save_pins(data):
 def track_user_activity(username, action="login"):
     metrics = load_admin_metrics()
     u_key = encode_cred(username)
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now(ZoneInfo('Africa/Lagos')).strftime("%Y-%m-%d %H:%M:%S")
     
     if u_key not in metrics:
         metrics[u_key] = {
@@ -112,7 +113,7 @@ def track_user_activity(username, action="login"):
             "last_active": now_str,
             "status": "Active",
             "payment_status": "Unpaid",
-            "license_expiry": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+            "license_expiry": (datetime.now(ZoneInfo('Africa/Lagos')) + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
         }
     else:
         metrics[u_key]["last_active"] = now_str
@@ -161,41 +162,36 @@ LANG_DATA = {
     }
 }
 
-st.set_page_config(page_title="Vektor AI", layout="wide")
+# FORCED CONFIGURATION FOR PERMANENT DARK MODE
+st.set_page_config(
+    page_title="Vektor AI", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# Apply global app background colors directly through css injection override
 st.markdown("""
     <style>
-    /* Turn off the entire top header container bar completely */
+    /* Force dynamic theme defaults to dark styling directly via CSS */
+    :root {
+        --background-color: #05070f;
+        --secondary-background-color: #121626;
+        --text-color: #e2e8f0;
+    }
+    
+    /* Re-enable display of top header containers & sidebar items on mobile viewports */
     header[data-testid="stHeader"], 
     [data-testid="stHeader"],
     .stHeader {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0px !important;
+        display: flex !important;
+        visibility: visible !important;
+        background-color: #05070f !important;
     }
     
-    /* Turn off the main menu hamburger, three dots, or developer action items */
-    #MainMenu, 
-    [data-testid="stActionButton"],
-    button[id*="MainMenu"] { 
-        visibility: hidden !important; 
-        display: none !important; 
-    }
-    
-    /* Turn off all bottom page decorations, status indicators, and Streamlit branding footprints */
-    footer,
-    [data-testid="stStatusWidget"],
-    .stStatusWidget,
-    [data-testid="stDecoration"],
-    div[class*="stViewerToolbar"],
-    div[class*="stStatusWidget"],
-    footer[class*="st-"],
-    .stViewerToolbar {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0px !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
+    /* Restore visibility parameters for sidebar control chevrons on mobile lenses */
+    [data-testid="sidebar-toggle"] {
+        visibility: visible !important;
+        display: block !important;
     }
     
     /* Reset main interface padding boundaries */
@@ -217,11 +213,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
-
-
-
-
 # ==========================================
 # GLOBAL PERSISTENT LANGUAGE SELECTION GRID
 # ==========================================
@@ -232,14 +223,14 @@ with col_lang2:
 
 tr = LANG_DATA.get(st.session_state.lang, LANG_DATA["English"])
 
-# PINNED LIVE CLOCK
+# PINNED LIVE CLOCK ADJUSTED FOR TIMEZONE ACCURACY (WAT)
 with col_lang1:
     clock_placeholder = st.empty()
-    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_time_str = datetime.now(ZoneInfo('Africa/Lagos')).strftime("%Y-%m-%d %H:%M:%S")
     clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
 # Secure API Auto-Engine Connection
-st.session_state.groq_key = "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"
+st.session_state.groq_key = os.environ.get("GROQ_API_KEY", "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")
 client = Groq(api_key=st.session_state.groq_key)
 
 if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
@@ -277,7 +268,7 @@ def render_security_gate():
                         is_unpaid = user_meta.get("payment_status", "Unpaid") != "Paid"
                         is_expired = False
                         if expiry_time_str:
-                            is_expired = datetime.now() > datetime.strptime(expiry_time_str, "%Y-%m-%d %H:%M:%S")
+                            is_expired = datetime.now(ZoneInfo('Africa/Lagos')) > datetime.strptime(expiry_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
                         
                         if is_unpaid and is_expired:
                             st.error("🚨 Your Free Access License Has Expired!")
@@ -299,9 +290,9 @@ def render_security_gate():
                                         metrics[u_key]["payment_status"] = "Paid"
                                     else:
                                         days_extension = pin_details["days_allotted"]
-                                        new_expiry = datetime.now() + timedelta(days=days_extension)
+                                        new_expiry = datetime.now(ZoneInfo('Africa/Lagos')) + timedelta(days=days_extension)
                                         metrics[u_key]["license_expiry"] = new_expiry.strftime("%Y-%m-%d %H:%M:%S")
-                                        metrics[u_key]["payment_status"] = "Unpaid" # Reset to check timeline expiration
+                                        metrics[u_key]["payment_status"] = "Unpaid"
                                         
                                     save_admin_metrics(metrics)
                                     st.success("🎉 Activation Successful! Access Window Granted. Please click Authorize Access again.")
@@ -413,8 +404,8 @@ if user_encoded_key in metrics_db:
     payment_status = meta_info.get("payment_status", "Unpaid")
     
     if exp_date_str:
-        exp_datetime = datetime.strptime(exp_date_str, "%Y-%m-%d %H:%M:%S")
-        time_delta = exp_datetime - datetime.now()
+        exp_datetime = datetime.strptime(exp_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
+        time_delta = exp_datetime - datetime.now(ZoneInfo('Africa/Lagos'))
         
         # Display dynamic status banners on top of operational dashboard
         if payment_status != "Paid":
@@ -644,10 +635,10 @@ elif st.session_state.active_view == "BILLING":
                     added_days = pin_info["days_allotted"]
                     current_exp_str = all_metrics[user_hashed_key].get("license_expiry")
                     
-                    if current_exp_str and datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S") > datetime.now():
-                        base_datetime = datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S")
+                    if current_exp_str and datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos')) > datetime.now(ZoneInfo('Africa/Lagos')):
+                        base_datetime = datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
                     else:
-                        base_datetime = datetime.now()
+                        base_datetime = datetime.now(ZoneInfo('Africa/Lagos'))
                         
                     new_computed_exp = base_datetime + timedelta(days=added_days)
                     all_metrics[user_hashed_key]["license_expiry"] = new_computed_exp.strftime("%Y-%m-%d %H:%M:%S")
