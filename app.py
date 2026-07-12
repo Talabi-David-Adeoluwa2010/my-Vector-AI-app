@@ -165,44 +165,29 @@ st.set_page_config(page_title="Vektor AI", layout="wide")
 
 st.markdown("""
     <style>
-    /* Keep the top header bar active so the three dots can show up */
-    header[data-testid="stHeader"] {
-        display: flex !important;
-        visibility: visible !important;
-    }
-    
-    /* Make sure the main menu (three dots icon) is completely visible */
-    #MainMenu, [data-testid="stActionButton"] {
-        visibility: visible !important;
-        display: inline-block !important;
-    }
-    
-    /* Hide ONLY the Fork link container button from the top header */
-    header[data-testid="stHeader"] a[href*="github.com"],
-    header[data-testid="stHeader"] div:has(> a[href*="github.com"]),
-    .stApp .stHeader a {
-        display: none !important;
-        visibility: hidden !important;
-    }
-
-    /* Completely wipe out the bottom right section (Crown & Hosted with Streamlit text buttons) */
-    footer,
+    /* Absolute global lockdown for top and bottom cloud navigation wrapper controls */
+    iframe, header, footer, #MainMenu, 
+    [data-testid="stHeader"], 
     [data-testid="stStatusWidget"],
+    [data-testid="stDecoration"],
+    [data-testid="stActionButton"],
     .stStatusWidget,
+    .stViewerToolbar,
     div[class*="stViewerToolbar"],
     div[class*="stStatusWidget"],
-    footer[class*="st-"],
-    .stViewerToolbar {
+    footer[class*="st-"] {
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
+        width: 0px !important;
         opacity: 0 !important;
+        pointer-events: none !important;
     }
-
-    /* Adjust page structure spacing */
+    
+    /* Clean up container layout padding rules */
     .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
     }
     
     /* Core App design matrix layout constants */
@@ -217,6 +202,7 @@ st.markdown("""
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
