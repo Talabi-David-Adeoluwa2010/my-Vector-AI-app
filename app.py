@@ -165,29 +165,43 @@ st.set_page_config(page_title="Vektor AI", layout="wide")
 
 st.markdown("""
     <style>
-    /* Absolute global lockdown for top and bottom cloud navigation wrapper controls */
-    iframe, header, footer, #MainMenu, 
-    [data-testid="stHeader"], 
-    [data-testid="stStatusWidget"],
-    [data-testid="stDecoration"],
-    [data-testid="stActionButton"],
-    .stStatusWidget,
-    .stViewerToolbar,
-    div[class*="stViewerToolbar"],
-    div[class*="stStatusWidget"],
-    footer[class*="st-"] {
+    /* Turn off the entire top header container bar completely */
+    header[data-testid="stHeader"], 
+    [data-testid="stHeader"],
+    .stHeader {
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
-        width: 0px !important;
+    }
+    
+    /* Turn off the main menu hamburger,or developer action items */
+    #MainMenu, 
+    [data-testid="stActionButton"],
+    button[id*="MainMenu"] { 
+        visibility: hidden !important; 
+        display: none !important; 
+    }
+    
+    /* Turn off all bottom page decorations, status indicators, and Streamlit branding footprints */
+    footer,
+    [data-testid="stStatusWidget"],
+    .stStatusWidget,
+    [data-testid="stDecoration"],
+    div[class*="stViewerToolbar"],
+    div[class*="stStatusWidget"],
+    footer[class*="st-"],
+    .stViewerToolbar {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
         opacity: 0 !important;
         pointer-events: none !important;
     }
     
-    /* Clean up container layout padding rules */
+    /* Reset main interface padding boundaries */
     .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 1.5rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
     }
     
     /* Core App design matrix layout constants */
