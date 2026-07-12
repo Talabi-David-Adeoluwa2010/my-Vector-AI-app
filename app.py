@@ -218,14 +218,14 @@ st.markdown("""
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     
-    /* Beautified Load Portal Grid CSS Rules */
-    .beautified-auth-container {
-        background: rgba(14, 20, 38, 0.85);
-        border: 1px solid #1e2942;
-        padding: 35px;
+    /* BEAUTIFIED LOAD PORTAL MATRIX GRAPHICS */
+    .load-matrix-card {
+        background: rgba(18, 22, 38, 0.85);
+        border: 1px solid #1f293d;
         border-radius: 20px;
-        box-shadow: 0 8px 32px rgba(0, 242, 254, 0.08);
-        margin-top: 15px;
+        padding: 35px;
+        box-shadow: 0 10px 30px rgba(0, 242, 254, 0.1);
+        margin-top: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -253,7 +253,7 @@ client = Groq(api_key=st.session_state.groq_key)
 if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
 
 # ==========================================
-# SEAMLESS LOGIN GATE WITH DYNAMIC PIN ACTIVATION
+# SEAMLESS BEAUTIFIED LOGIN GATE WITH DYNAMIC PIN ACTIVATION
 # ==========================================
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "current_user" not in st.session_state: st.session_state.current_user = ""
@@ -263,12 +263,12 @@ def render_security_gate():
     st.markdown("<div style='text-align: center; margin-top: 5%;'>", unsafe_allow_html=True)
     st.markdown("<div class='cyber-logo'>⚡ VEKTOR.AI</div>", unsafe_allow_html=True)
     st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color: #94a3b8; font-size: 1.1rem;'>{tr['gate_title']}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:#00f2fe; font-family:monospace; letter-spacing:2px;'>{tr['gate_title']}</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
     
-    _, center_col, _ = st.columns([0.8, 1.4, 0.8])
+    _, center_col, _ = st.columns([0.7, 1.6, 0.7])
     with center_col:
-        st.markdown("<div class='beautified-auth-container'>", unsafe_allow_html=True)
+        st.markdown("<div class='load-matrix-card'>", unsafe_allow_html=True)
         auth_mode = st.tabs([tr["signin"], tr["register"]])
         with auth_mode[0]:
             input_user = st.text_input(tr["username"], key="login_user")
@@ -362,7 +362,7 @@ with st.sidebar:
     st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
     st.caption(f"Logged as: **{st.session_state.current_user}**")
     
-    # INDEPENDENT ABOUT BUTTON AS REQUESTED (NOT HIDDEN IN DROPDOWNS)
+    # STANDALONE CLEAN ABOUT BUTTON MATRIX
     if st.button("ℹ️ About Vektor AI App", use_container_width=True):
         st.session_state.active_view = "ABOUT"
         st.rerun()
@@ -459,7 +459,7 @@ if user_encoded_key in metrics_db:
                 </div>
             """, unsafe_allow_html=True)
 
-# SCREEN: DEDICATED CLEANED ABOUT PAGE VIEW
+# SCREEN: INDEPENDENT CLEANED ABOUT VIEW STATE
 if st.session_state.active_view == "ABOUT":
     st.markdown("<div class='cyber-logo'>ℹ️ ABOUT VEKTOR AI</div>", unsafe_allow_html=True)
     st.caption("Application System Parameters & Navigation Manual")
@@ -469,7 +469,6 @@ if st.session_state.active_view == "ABOUT":
         st.rerun()
         
     st.write("---")
-    
     st.markdown("""
     <div class='feature-card'>
         <h3>🤖 What is Vektor AI?</h3>
