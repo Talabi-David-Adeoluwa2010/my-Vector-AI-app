@@ -22,7 +22,7 @@ PINS_FILE = ".vektor_activation_pins.json"
 # AUTHENTICATION & STORAGE UTILITIES
 # ==========================================
 def encode_cred(text):
-    return base64.b64encode(text.encode()).decode() grade
+    return base64.b64encode(text.encode()).decode()
 
 def load_vault():
     if os.path.exists(VAULT_FILE):
