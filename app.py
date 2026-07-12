@@ -349,14 +349,64 @@ def query_standalone_engine(prompt):
 track_user_activity(st.session_state.current_user, action="heartbeat")
 
 # Sidebar Operations
+import streamlit as st
+import os
+
+# ==========================================
+# SIDEBAR NAVIGATION & CORE SYSTEM MODULE
+# ==========================================
 with st.sidebar:
     st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
-    st.caption(f"Logged as: **{st.session_state.current_user}**")
+    st.caption(f"Logged as: **{st.session_state.get('current_user', 'Guest')}**")
     module_selection = st.selectbox(tr["nav_lbl"], [
         tr["comp_panel"], tr["oracle_chat"], tr["exec_brief"], tr["composer"], tr["extractor"], 
         tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
     ])
     st.write("---")
+
+# ==========================================
+# MAIN INTERFACE HEADER TITLE DISPLAY
+# ==========================================
+st.markdown(f"<div class='cyber-logo'>{tr['title']}</div>", unsafe_allow_html=True)
+st.write("---")
+
+# ==========================================
+# TALABI DAVID ADEOLUWA SIV PROFILE BLOCK
+# ==========================================
+st.markdown("### 🌐 SOVEREIGN ARCHITECT RECON & BIO ARCHIVE")
+col_profile_img, col_profile_bio = st.columns([1, 2])
+
+with col_profile_img:
+    # Ensure your image file is named 'david.png' and uploaded to the same folder on GitHub
+    if os.path.exists("david.png"):
+        st.image("david.png", caption="Talabi David Adeoluwa", use_container_width=True)
+    else:
+        st.info("📷 System Node: Upload 'david.png' to GitHub to populate the visual architect matrix block.")
+
+with col_profile_bio:
+    st.markdown("#### **Talabi David Adeoluwa**")
+    st.caption("🚀 Programmer // Software Developer // Systems Engineer // Tech Entrepreneur")
+    st.write(
+        "I am Talabi David Adeoluwa, a passionate programmer, developer, engineer, and student entrepreneur. "
+        "Driven by innovation, I focus on building tools that simplify technology and empower user workflows. "
+        "I am the inventor of Vektor AI—a high-performance multi-agent workspace matrix—and continue to design "
+        "cutting-edge software solutions that bridge the gap between complex engineering and everyday utility."
+    )
+    
+    # Deployment Download Anchor Nodes
+    col_dl_btn1, col_dl_btn2 = st.columns(2)
+    with col_dl_btn1:
+        st.link_button("📲 Download Android APK App", "https://tinyurl.com/VektorAI", use_container_width=True)
+    with col_dl_btn2:
+        st.link_button("🌐 Open Live Sovereign WebApp", "https://my-vector-ai-app.onrender.com", use_container_width=True)
+
+st.write("---")
+
+# ==========================================
+# DYNAMIC MODULE EXECUTION ROUTER
+# ==========================================
+# Your module execution logic (if module_selection == ...) continues below here...
+
     
     st.markdown("### 🏛️ Dedicated Workspaces")
     if st.button("📝 Open Fullscreen Notepad", use_container_width=True):
