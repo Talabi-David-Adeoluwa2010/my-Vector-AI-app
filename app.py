@@ -531,11 +531,10 @@ with st.sidebar:
     st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
     st.caption(f"Logged as: **{st.session_state.current_user}**")
     
-    # Injected tr["about_panel"] right into your selector configuration array list
+    # "ℹ️ About" option has been REMOVED from this dropdown selection menu
     module_selection = st.selectbox(tr["nav_lbl"], [
         tr["comp_panel"], tr["oracle_chat"], tr["exec_brief"], tr["composer"], tr["extractor"], 
-        tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"],
-        tr["about_panel"]
+        tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
     ])
     st.write("---")
 
@@ -548,6 +547,10 @@ with st.sidebar:
         st.rerun()
     if st.button("💳 Billing & Access Management", use_container_width=True):
         st.session_state.active_view = "BILLING"
+        st.rerun()
+    # NEW: Dedicated Standalone About Application Button in the Sidebar
+    if st.button("ℹ️ About Application", use_container_width=True):
+        st.session_state.active_view = "ABOUT"
         st.rerun()
         
     st.write("---")
@@ -843,7 +846,60 @@ elif st.session_state.active_view == "BILLING":
                 st.error("🚨 Specified verification key index string is invalid or already consumed.")
     st.stop()
 
-# SCREEN 4: MASTER DASHBOARD BASE PLATFORM
+# SCREEN 4: DEDICATED FULLSCREEN ABOUT APPLICATION VIEW
+elif st.session_state.active_view == "ABOUT":
+    st.markdown("<div class='cyber-logo'>ℹ️ ABOUT VEKTOR AI</div>", unsafe_allow_html=True)
+    st.caption("Sovereign Information Portal — System Blueprint & Operations Manual")
+    
+    if st.button("🏠 Return to System Dashboard", use_container_width=True):
+        st.session_state.active_view = "HOME"
+        st.rerun()
+        
+    st.write("---")
+    
+    st.markdown(
+        """
+        <div class="about-app-details">
+            <h2>About Vektor AI</h2>
+            <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
+            <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
+            <p>Vektor AI is a cutting-edge computing ecosystem engineered to streamline workflows, data management, and AI execution blocks. It bridges deep technical capability with functional, daily-use developer utilities, empowering users with instant command access through a unified local interface.</p>
+            
+            <h3>How to Navigate Around the App</h3>
+            <ol>
+                <li><strong>Core Engine Control</strong>: Use the drop-down box at the top of the left sidebar to cycle through modules like the Oracle Chat, Executive Briefing Engine, or Resource Predictor.</li>
+                <li><strong>Dedicated Workspaces</strong>: Switch between fullscreen environments (Notepad, Vision Foundry, Billing Ledger, and this manual) by clicking their respective dedicated buttons in the sidebar.</li>
+                <li><strong>Resetting Cache</strong>: If you ever need to clear local historical parameters, click <em>"Clear Cache Data"</em> in the sidebar to flush files cleanly.</li>
+            </ol>
+
+            <h3>Things the App Can Do</h3>
+            <ul>
+                <li><strong>Dynamic Pricing Oracle</strong>: Fetch current global market commodity evaluations instantly and convert values into any target currency.</li>
+                <li><strong>Document Processing (PDF)</strong>: Ingest multi-page documents to execute context chats, cross-file audits, structural content extraction, and key milestone logging.</li>
+                <li><strong>Multimodal Foundry</strong>: Render photorealistic generative imagery on demand, create custom narration scripts, and access real-time device camera feeds with dynamic filters and analysis.</li>
+                <li><strong>Runway & Risk Simulators</strong>: Process liability spreadsheets, compute capitalization structures, and stress-test target portfolios against simulated macroeconomic shock scenarios.</li>
+            </ul>
+
+            <h3>How to Pay for the App</h3>
+            <p>Vektor AI works on a flexible subscription model. Follow these simple steps to activate or renew your license:</p>
+            <ol>
+                <li><strong>Contact Admin</strong>: Reach out directly via WhatsApp or Phone to register your payment at <strong>+2348024300891</strong>.</li>
+                <li><strong>Select a Billing Tier</strong>:
+                    <ul>
+                        <li><strong>1 Week Plan</strong>: $3.99 (~ ₦5,499)</li>
+                        <li><strong>1 Month Plan</strong>: $11.99 (~ ₦16,599)</li>
+                        <li><strong>2 Month Plan</strong>: $22.99 (~ ₦30,199)</li>
+                    </ul>
+                </li>
+                <li><strong>Apply Your Key</strong>: Once payment is complete, the admin will generate a secure PIN (e.g., <code>VK-XXXX-XXXX</code>). Paste this code into either the login-block window or the <em>Billing & Access Management</em> portal to instantly extend your access matrix.</li>
+            </ol>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.stop()
+
+# SCREEN 5: MASTER DASHBOARD BASE PLATFORM
 st.markdown(f"<div class='cyber-logo'>{tr['title']}</div>", unsafe_allow_html=True)
 st.write("---")
 
@@ -1047,38 +1103,6 @@ elif module_selection == tr["runway_plan"]:
         st.session_state.runway_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
     if st.session_state.get("runway_store"): st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
-
-# ==========================================================
-# NEW INJECTED PANEL: COMPREHENSIVE ABOUT APP MATRIX VIEW
-# ==========================================================
-elif module_selection == tr["about_panel"]:
-    st.markdown(
-        """
-        <div class="about-app-details">
-            <h2>About Vektor AI</h2>
-            <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
-            <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
-            
-            <h3>System Overview</h3>
-            <p>Vektor AI is a highly specialized computing ecosystem engineered to optimize modern developer workflows, data orchestration models, and parallel multi-agent executions. It cleanly bridges high-end technical architectures with functional daily utilities, giving engineering teams direct command arrays through a unified secure local operational matrix.</p>
-            
-            <h3>Key Core Modules</h3>
-            <ul>
-                <li><strong>Sovereign Architect Engine:</strong> Manages primary parsing pipelines, workflow execution trees, and global workspace states.</li>
-                <li><strong>Reconnaissance Node:</strong> Directs background network indexing, commodity matrix arrays, vulnerability testing loops, and system dependency telemetry.</li>
-                <li><strong>Bio Archive Module:</strong> Houses encrypted vaults for secure credential parameters, local workspace profile states, and cryptographic asset tokens.</li>
-            </ul>
-
-            <h3>How to Navigate Vektor AI</h3>
-            <ol>
-                <li><strong>System Workspace Control:</strong> Select specialized operational targets or update pipeline requirements directly using the central drop-down selector parameters.</li>
-                <li><strong>Persistent Access Bar:</strong> Toggle standard sidebar configurations with fluid movement. The sidebar maintains a persistent open sliver footprint, keeping interaction targets discoverable at all times.</li>
-                <li><strong>Cross-Platform Infrastructure:</strong> Easily pull local runtime profiles, download standalone Android APK binaries, or launch active parallel vision instances straight from your profile workspace notepad and foundry modules.</li>
-            </ol>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 
 st.write("---")
 st.markdown("## 💎 Premium Asset Allocation & Macro Shock Simulator")
