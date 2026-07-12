@@ -1071,7 +1071,7 @@ elif module_selection == tr["oracle_chat"]:
             reply = query_standalone_engine(prompt)
             st.session_state.chat_history.append((user_query, reply))
             save_history(st.session_state.current_user, "chat", st.session_state.chat_history)
-      if st.session_state.get("chat_history"):
+            if st.session_state.get("chat_history"):
                 for q, a in reversed(st.session_state.chat_history):
                         st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b></div>", unsafe_allow_html=True)
                         st.markdown(a)
