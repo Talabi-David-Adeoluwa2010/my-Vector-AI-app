@@ -166,6 +166,21 @@ st.set_page_config(
     page_title="Vektor AI",
     page_icon="playstore.png"
 )
+import streamlit.components.v1 as components
+
+# Force Safari to use your custom icon on the iPhone Home Screen
+components.html(
+    """
+    <script>
+        const link = window.parent.document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = 'https://raw.githubusercontent.com/Talabi-David-Adeoluwa2010/my-Vector-AI-app/main/playstore.png';
+        window.parent.document.head.appendChild(link);
+    </script>
+    """,
+    height=0,
+)
+
 
 
 st.markdown("""
