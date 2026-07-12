@@ -174,7 +174,7 @@ st.markdown("""
         height: 0px !important;
     }
     
-    /* Turn off the main menu hamburger,or developer action items */
+    /* Turn off the main menu hamburger, three dots, or developer action items */
     #MainMenu, 
     [data-testid="stActionButton"],
     button[id*="MainMenu"] { 
