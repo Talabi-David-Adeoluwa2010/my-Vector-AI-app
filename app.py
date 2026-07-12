@@ -165,37 +165,41 @@ st.set_page_config(page_title="Vektor AI", layout="wide")
 
 st.markdown("""
     <style>
-    /* Ensure the top header bar and its three-dots action menu remain completely visible */
+    /* Keep the top header bar active so the three dots can show up */
     header[data-testid="stHeader"] {
         display: flex !important;
         visibility: visible !important;
     }
+    
+    /* Make sure the main menu (three dots icon) is completely visible */
     #MainMenu, [data-testid="stActionButton"] {
         visibility: visible !important;
         display: inline-block !important;
     }
     
-    /* Completely hide the bottom GitHub Fork button link from the header layout */
-    header[data-testid="stHeader"] a, 
-    header[data-testid="stHeader"] iframe {
+    /* Hide ONLY the Fork link container button from the top header */
+    header[data-testid="stHeader"] a[href*="github.com"],
+    header[data-testid="stHeader"] div:has(> a[href*="github.com"]),
+    .stApp .stHeader a {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* Target and remove the entire bottom-right toolbar (Crown & Hosted with Streamlit buttons) */
+    /* Completely wipe out the bottom right section (Crown & Hosted with Streamlit text buttons) */
     footer,
     [data-testid="stStatusWidget"],
     .stStatusWidget,
     div[class*="stViewerToolbar"],
     div[class*="stStatusWidget"],
-    footer[class*="st-"] {
+    footer[class*="st-"],
+    .stViewerToolbar {
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
         opacity: 0 !important;
     }
 
-    /* Clean up container padding rules */
+    /* Adjust page structure spacing */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 2rem !important;
@@ -213,6 +217,7 @@ st.markdown("""
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
