@@ -424,19 +424,23 @@ st.markdown("""
         display: flex !important;
         visibility: visible !important;
         background-color: #05070f !important;
-    }
-    /* Clean native collapse that completely clears the main screen viewport without overlapping */
+    }/* Fully hides the sidebar when closed so nothing overlaps the main screen layout */
 section[data-testid="stSidebar"][aria-expanded="false"] {
     transform: translateX(-100%) !important;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: none !important;
+    border-right: none !important;
+    visibility: hidden;
+    transition: transform 0.3s ease, visibility 0.3s ease !important;
 }
 
+/* Stylish and clean look when open */
 section[data-testid="stSidebar"][aria-expanded="true"] {
-    border-right: 1px solid #1f293d !important;
-    box-shadow: 4px 0px 15px rgba(0, 0, 0, 0.5) !important;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    visibility: visible;
+    border-right: 2px solid #00f2fe !important;
+    box-shadow: 10px 0px 30px rgba(0, 242, 254, 0.15) !important;
+    transition: transform 0.3s ease !important;
 }
+
 
     
     [data-testid="sidebar-toggle"] {
