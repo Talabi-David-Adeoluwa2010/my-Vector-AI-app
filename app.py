@@ -11,6 +11,7 @@ from groq import Groq
 from PIL import Image
 import io
 import urllib.parse
+import streamlit.components.v1 as components
 
 VAULT_FILE = ".vektor_vault.json"
 HISTORY_FILE = ".vektor_history.json"
@@ -123,7 +124,7 @@ def track_user_activity(username, action="login"):
     save_admin_metrics(metrics)
 
 # ==========================================
-# MULTILINGUAL DICTIONARY MATRIX
+# MULTILINGUAL DICTIONARY MATRIX WITH ABOUT
 # ==========================================
 LANG_DATA = {
     "English": {
@@ -139,6 +140,7 @@ LANG_DATA = {
         "composer": "✉️ Contextual Draft Composer", "extractor": "📊 Structural Data Extractor", "cross_file": "🔍 Cross-File Intelligence",
         "tracker": "📅 Task & Milestone Tracker", "sandbox": "💡 Brainstorm Sandbox", "predictor": "💸 Resource Predictor",
         "indexer": "🗂️ Knowledge Base Indexer", "runway_plan": "🛡️ Runway & Reinvestment Planner",
+        "about_panel": "ℹ️ About Application",
         "run_diag": "⚡ Run System Diagnostic Engine", "error_ingest": "🚨 Ingestion Missing: Drop asset documents into the workspace first.",
         "calc_btn": "📊 Calculate Parameters", "success_ac": "⚡ Data Accelerator updated successfully!",
         "save_fn": "Save As (Filename):", "dl_lbl": "📥 Save As (Download File)", "metrics_lbl": "Enter comma-separated metric values:"
@@ -156,6 +158,7 @@ LANG_DATA = {
         "composer": "✉️ Compositeur de Projet Contextuel", "extractor": "📊 Extracteur de Données Structurelles", "cross_file": "🔍 Intelligence Multi-Fichiers",
         "tracker": "📅 Suivi des Tâches & Jalons", "sandbox": "💡 Bac à Sable Remue-Méninges", "predictor": "💸 Prédiction de Ressources",
         "indexer": "🗂️ Indexeur de Base de Connaissances", "runway_plan": "🛡️ Planificateur de Trésorerie & Réinvestissement",
+        "about_panel": "ℹ️ À Propos de l'App",
         "run_diag": "⚡ Lancer le Diagnostic Système", "error_ingest": "🚨 Ingestion Manquante: Déposez les documents d'actifs d'abord.",
         "calc_btn": "📊 Calculer les Paramètres", "success_ac": "⚡ Accélérateur de données mis à jour!",
         "save_fn": "Enregistrer sous (Nom du fichier):", "dl_lbl": "📥 Télécharger le fichier", "metrics_lbl": "Entrez les valeurs séparées par des virgules:"
@@ -166,7 +169,6 @@ st.set_page_config(
     page_title="Vektor AI",
     page_icon="playstore.png"
 )
-import streamlit.components.v1 as components
 
 # Force Safari to use your custom icon on the iPhone Home Screen
 components.html(
@@ -181,6 +183,178 @@ components.html(
     height=0,
 )
 
+# Initialize Session variables
+if "loading_complete" not in st.session_state: st.session_state.loading_complete = False
+if "authenticated" not in st.session_state: st.session_state.authenticated = False
+if "current_user" not in st.session_state: st.session_state.current_user = ""
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
+if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
+
+# ==========================================================
+# 1. BEAUTIFUL HIGH-TECH LOADING SCREEN / CUSTOM SPLASH PAGE
+# ==========================================================
+if not st.session_state.loading_complete:
+    components.html(
+        """
+        <div id="loading-screen">
+            <div class="loading-content">
+                <img src="https://raw.githubusercontent.com/Talabi-David-Adeoluwa2010/my-Vector-AI-app/main/playstore.png" alt="Vektor AI Logo" class="vektor-logo">
+                
+                <div class="app-intro">
+                    <h2>Welcome to Vektor AI</h2>
+                    <p>A high-performance multi-agent workspace matrix engineered to simplify complex developer workflows and asset telemetry.</p>
+                    <div class="navigation-tips">
+                        <h3>Quick Navigation Guide:</h3>
+                        <ul>
+                            <li>Use the persistent sidebar on the left to navigate dashboard view arrays.</li>
+                            <li>Access deep architecture details through the new sidebar 'About' button.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div id="progress-bar"></div>
+                </div>
+                <div id="progress-text">0%</div>
+
+                <div class="founder-credits">
+                    Founder / Produced by - Talabi David Adeoluwa
+                </div>
+            </div>
+        </div>
+
+        <style>
+            #loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #05070f;
+                color: #ffffff;
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+            .loading-content {
+                text-align: center;
+                width: 90%;
+                max-width: 480px;
+                position: relative;
+                height: 90vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .vektor-logo {
+                width: 110px;
+                height: 110px;
+                object-fit: contain;
+                margin-bottom: 25px;
+                border-radius: 20px;
+                box-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
+                animation: pulse 2s infinite ease-in-out;
+            }
+            .app-intro h2 {
+                color: #00f2fe;
+                margin-bottom: 12px;
+                font-size: 1.7rem;
+                letter-spacing: 0.5px;
+            }
+            .app-intro p {
+                font-size: 0.95rem;
+                color: #94a3b8;
+                line-height: 1.5;
+                margin-bottom: 15px;
+            }
+            .navigation-tips {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid #1f293d;
+                padding: 15px;
+                border-radius: 12px;
+                margin: 15px 0;
+                text-align: left;
+            }
+            .navigation-tips h3 {
+                font-size: 0.9rem;
+                color: #4facfe;
+                margin-top: 0;
+                margin-bottom: 6px;
+            }
+            .navigation-tips ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.85rem;
+                color: #cbd5e1;
+            }
+            .navigation-tips li { margin-bottom: 5px; }
+            .progress-container {
+                width: 100%;
+                background-color: #121626;
+                border-radius: 10px;
+                height: 8px;
+                overflow: hidden;
+                margin-top: 20px;
+                border: 1px solid #1f293d;
+            }
+            #progress-bar {
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #00f2fe, #4facfe);
+            }
+            #progress-text {
+                margin-top: 8px;
+                font-size: 0.85rem;
+                color: #64748b;
+            }
+            .founder-credits {
+                position: absolute;
+                bottom: 20px;
+                left: 10px;
+                font-size: 0.8rem;
+                color: #64748b;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 0.9; }
+                50% { transform: scale(1.05); opacity: 1; }
+                100% { transform: scale(1); opacity: 0.9; }
+            }
+        </style>
+
+        <script>
+            let width = 0;
+            let bar = document.getElementById('progress-bar');
+            let txt = document.getElementById('progress-text');
+            let loop = setInterval(() => {
+                if(width >= 100) {
+                    clearInterval(loop);
+                    // Tell Streamlit framework that setup timeline is complete
+                    window.parent.postMessage({type: 'streamlit:set_page_config', loading_done: true}, '*');
+                    document.getElementById('loading-screen').style.display = 'none';
+                } else {
+                    width++;
+                    bar.style.width = width + '%';
+                    txt.textContent = width + '%';
+                }
+            }, 35);
+        </script>
+        """,
+        height=750,
+    )
+    # Block further Python processing until countdown hits 100
+    st.session_state.loading_complete = True
+    time.sleep(3.6)
+    st.rerun()
+
+# ==========================================
+# GLOBAL SIDEBAR & LAYOUT CSS MODIFICATIONS
+# ==========================================
 st.markdown("""
     <style>
     :root {
@@ -195,6 +369,12 @@ st.markdown("""
         display: flex !important;
         visibility: visible !important;
         background-color: #05070f !important;
+    }
+    
+    /* Persistent open-state sliver rules for the standard Streamlit sidebar wrapper */
+    [data-testid="stSidebar"] {
+        min-width: 60px !important;
+        transition: transform 0.3s ease !important;
     }
     
     [data-testid="sidebar-toggle"] {
@@ -217,6 +397,14 @@ st.markdown("""
     .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-top: 10px; margin-bottom: 15px; }
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
+    
+    /* Custom Stylings for the New About Application Block UI */
+    .about-app-details { background-color: #121626; border: 1px solid #1f293d; border-radius: 16px; padding: 30px; line-height: 1.6; }
+    .about-app-details h2 { color: #ffffff; border-bottom: 1px solid #1f293d; padding-bottom: 12px; margin-top: 0; }
+    .about-app-details h3 { color: #00f2fe; margin-top: 25px; margin-bottom: 8px; }
+    .about-app-details ul, .about-app-details ol { padding-left: 22px; color: #94a3b8; }
+    .about-app-details li { margin-bottom: 8px; }
+    .about-app-details strong { color: #ffffff; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -230,23 +418,19 @@ with col_lang2:
 
 tr = LANG_DATA.get(st.session_state.lang, LANG_DATA["English"])
 
+# PINNED LIVE CLOCK ADJUSTED FOR TIMEZONE ACCURACY (WAT)
 with col_lang1:
     clock_placeholder = st.empty()
     current_time_str = datetime.now(ZoneInfo('Africa/Lagos')).strftime("%Y-%m-%d %H:%M:%S")
     clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
+# Secure API Auto-Engine Connection
 st.session_state.groq_key = os.environ.get("GROQ_API_KEY", "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")
 client = Groq(api_key=st.session_state.groq_key)
-
-if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
 
 # ==========================================
 # SEAMLESS LOGIN GATE WITH DYNAMIC PIN ACTIVATION
 # ==========================================
-if "authenticated" not in st.session_state: st.session_state.authenticated = False
-if "current_user" not in st.session_state: st.session_state.current_user = ""
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
-
 def render_security_gate():
     st.markdown("<div style='text-align: center; margin-top: 3%;'>", unsafe_allow_html=True)
     st.markdown("<div class='cyber-logo'>⚡ VEKTOR.AI</div>", unsafe_allow_html=True)
@@ -262,11 +446,14 @@ def render_security_gate():
             if st.button(tr["btn_auth"], use_container_width=True):
                 vault = load_vault()
                 if encode_cred(input_user) in vault and vault[encode_cred(input_user)] == encode_cred(input_pass):
+                    
+                    # TRIAL AND EXPIRY CHECK AGENT
                     metrics = load_admin_metrics()
                     u_key = encode_cred(input_user)
                     if u_key in metrics:
                         user_meta = metrics[u_key]
                         expiry_time_str = user_meta.get("license_expiry")
+                        
                         is_unpaid = user_meta.get("payment_status", "Unpaid") != "Paid"
                         is_expired = False
                         if expiry_time_str:
@@ -274,13 +461,20 @@ def render_security_gate():
                         
                         if is_unpaid and is_expired:
                             st.error("🚨 Your Free Access License Has Expired!")
+                            st.write("Please paste a valid structural verification activation key code below to update your operational window matrix.")
+                            
                             activation_input = st.text_input("Enter Activation PIN (e.g., VK-XXXX-XXXX):", key="activation_pin_box")
                             if st.button("🔓 Authenticate & Apply Key", use_container_width=True):
                                 pins_db = load_pins()
                                 if activation_input in pins_db and pins_db[activation_input]["status"] == "Unused":
+                                    pin_details = pins_db[activation_input]
+                                    
+                                    # Flag the token as redeemed
                                     pins_db[activation_input]["status"] = "Claimed"
                                     pins_db[activation_input]["claimed_by"] = input_user
                                     save_pins(pins_db)
+                                    
+                                    # Apply new timeline variables
                                     if pin_details["is_forever"]:
                                         metrics[u_key]["payment_status"] = "Paid"
                                     else:
@@ -288,8 +482,13 @@ def render_security_gate():
                                         new_expiry = datetime.now(ZoneInfo('Africa/Lagos')) + timedelta(days=days_extension)
                                         metrics[u_key]["license_expiry"] = new_expiry.strftime("%Y-%m-%d %H:%M:%S")
                                         metrics[u_key]["payment_status"] = "Unpaid"
+                                        
                                     save_admin_metrics(metrics)
+                                    st.success("🎉 Activation Successful! Access Window Granted. Please click Authorize Access again.")
+                                    time.sleep(1)
                                     st.rerun()
+                                else:
+                                    st.error("🚨 Invalid or already claimed Activation PIN.")
                             st.stop()
                     
                     st.session_state.authenticated = True
@@ -310,7 +509,7 @@ def render_security_gate():
                     if encode_cred(new_user) in vault: st.error("🚨 Account exists.")
                     else:
                         save_to_vault(new_user, new_pass)
-                        st.success("Workspace Provisioned!")
+                        st.success("Workspace Provisioned! You have been granted a 1-Week Free Trial balance.")
     st.stop()
 
 if not st.session_state.authenticated: render_security_gate()
@@ -331,12 +530,15 @@ track_user_activity(st.session_state.current_user, action="heartbeat")
 with st.sidebar:
     st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
     st.caption(f"Logged as: **{st.session_state.current_user}**")
+    
+    # Injected tr["about_panel"] right into your selector configuration array list
     module_selection = st.selectbox(tr["nav_lbl"], [
         tr["comp_panel"], tr["oracle_chat"], tr["exec_brief"], tr["composer"], tr["extractor"], 
-        tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
+        tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"],
+        tr["about_panel"]
     ])
     st.write("---")
-    
+
     st.markdown("### 🏛️ Dedicated Workspaces")
     if st.button("📝 Open Fullscreen Notepad", use_container_width=True):
         st.session_state.active_view = "NOTEPAD"
@@ -372,6 +574,7 @@ with st.sidebar:
             st.session_state[key] = ""
             save_history(st.session_state.current_user, key.replace("_store", ""), "")
         save_history(st.session_state.current_user, "chat", [])
+        st.toast("Local persistent records flushed cleanly!")
         st.rerun()
     if st.button(tr["logout"], use_container_width=True):
         metrics = load_admin_metrics()
@@ -454,6 +657,7 @@ if st.session_state.active_view == "NOTEPAD":
                 st.code(historical_note)
                 if st.button(f"🔄 Reload Log File #{index + 1} Into Main Text Box", key=f"reload_note_{index}"):
                     save_notepad(st.session_state.current_user, historical_note, saved_history)
+                    st.toast("Note loaded successfully into editor view!")
                     st.rerun()
     else:
         st.caption("No historical notes logged inside the local workspace matrix yet.")
@@ -570,6 +774,7 @@ elif st.session_state.active_view == "BILLING":
     with col_b1:
         st.markdown("### 📊 Active Subscription Parameter Metrics")
         user_meta_profile = load_admin_metrics().get(encode_cred(st.session_state.current_user), {})
+        
         st.write(f"**Account Identity Space:** {st.session_state.current_user}")
         st.write(f"**Current Structural Tier Status:** `{user_meta_profile.get('payment_status', 'Unpaid')}`")
         st.write(f"**Computation Lifespan End Threshold:** `{user_meta_profile.get('license_expiry', 'N/A')}`")
@@ -577,9 +782,27 @@ elif st.session_state.active_view == "BILLING":
     with col_b2:
         st.markdown("<div class='billing-card'>", unsafe_allow_html=True)
 
-    st.markdown("<h4>👑 Upgrade to Unlimited Sovereign Space</h4>", unsafe_allow_html=True)
-    st.write("Unlock unrestricted model context pipelines, unlimited local vector database indices, and premium risk tools.\n\n📞 Contact Management: +2348024300891\nFor activation codes and payment bank details. Thank you.")
-    st.markdown("<h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3><h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3><h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<h4>👑 Upgrade to Unlimited Sovereign Space</h4>",
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "Unlock unrestricted model context pipelines, unlimited local "
+        "vector database indices, and premium risk tools.\n\n"
+        "📞 Contact Management: +2348024300891\n"
+        "For activation codes and payment bank details. Thank you."
+    )
+
+    st.markdown(
+        """
+        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
+        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
+        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.markdown("</div>", unsafe_allow_html=True)
         
     st.write("---")
@@ -592,57 +815,36 @@ elif st.session_state.active_view == "BILLING":
                 pin_info = pins_database[manual_invoice_pin]
                 user_hashed_key = encode_cred(st.session_state.current_user)
                 all_metrics = load_admin_metrics()
+                
                 pins_database[manual_invoice_pin]["status"] = "Claimed"
                 pins_database[manual_invoice_pin]["claimed_by"] = st.session_state.current_user
                 save_pins(pins_database)
+                
                 if pin_info["is_forever"]:
                     all_metrics[user_hashed_key]["payment_status"] = "Paid"
                 else:
                     added_days = pin_info["days_allotted"]
                     current_exp_str = all_metrics[user_hashed_key].get("license_expiry")
+                    
                     if current_exp_str and datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos')) > datetime.now(ZoneInfo('Africa/Lagos')):
                         base_datetime = datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
                     else:
                         base_datetime = datetime.now(ZoneInfo('Africa/Lagos'))
+                        
                     new_computed_exp = base_datetime + timedelta(days=added_days)
                     all_metrics[user_hashed_key]["license_expiry"] = new_computed_exp.strftime("%Y-%m-%d %H:%M:%S")
                     all_metrics[user_hashed_key]["payment_status"] = "Unpaid"
+                    
                 save_admin_metrics(all_metrics)
+                st.success("🎉 Matrix Timeline Extension Applied! Click below to return.")
+                time.sleep(1)
                 st.rerun()
+            else:
+                st.error("🚨 Specified verification key index string is invalid or already consumed.")
     st.stop()
 
 # SCREEN 4: MASTER DASHBOARD BASE PLATFORM
 st.markdown(f"<div class='cyber-logo'>{tr['title']}</div>", unsafe_allow_html=True)
-st.write("---")
-
-# =========================================================
-# TALABI DAVID ADEOLUWA PUBLIC SEARCH ENGINE INDEXING BLOCK
-# =========================================================
-st.markdown("### 🌐 SOVEREIGN ARCHITECT RECON & BIO ARCHIVE")
-col_profile_img, col_profile_bio = st.columns([1, 2])
-
-with col_profile_img:
-    if os.path.exists("david.png"):
-        st.image("david.png", caption="Talabi David Adeoluwa", use_container_width=True)
-    else:
-        st.info("📷 System Node: Please upload your photo to GitHub and name the file exactly 'david.png' to render your profile portrait layout.")
-
-with col_profile_bio:
-    st.markdown("#### **Talabi David Adeoluwa**")
-    st.caption("🚀 Programmer // Software Developer // Systems Engineer // Tech Entrepreneur")
-    st.write(
-        "I am Talabi David Adeoluwa, a passionate programmer, developer, engineer, and student entrepreneur. "
-        "Driven by innovation, I focus on building tools that simplify technology and empower user workflows. "
-        "I am the inventor of Vektor AI—a high-performance multi-agent workspace matrix—and continue to design "
-        "cutting-edge software solutions that bridge the gap between complex engineering and everyday utility."
-    )
-    
-    col_dl_btn1, col_dl_btn2 = st.columns(2)
-    with col_dl_btn1:
-        st.link_button("📲 Download Android APK App", "https://tinyurl.com/VektorAI", use_container_width=True)
-    with col_dl_btn2:
-        st.link_button("🌐 Open Live Sovereign WebApp", "https://my-vector-ai-app.onrender.com", use_container_width=True)
-
 st.write("---")
 
 st.markdown("### 🚀 Dynamic Workspace Hot-Keys")
@@ -697,6 +899,9 @@ if uploaded_files:
 
 context_ready = 'raw_context' in st.session_state and st.session_state.raw_context.strip() != ""
 
+# ========================================================
+# CENTRALIZED MODULAR VIEWS (ROUTED VIA module_selection)
+# ========================================================
 if module_selection == tr["comp_panel"]:
     st.subheader(tr["comp_panel"])
     with st.expander("🛠 Rose Graph Configuration Studio", expanded=True):
@@ -843,6 +1048,38 @@ elif module_selection == tr["runway_plan"]:
         save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
     if st.session_state.get("runway_store"): st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
 
+# ==========================================================
+# NEW INJECTED PANEL: COMPREHENSIVE ABOUT APP MATRIX VIEW
+# ==========================================================
+elif module_selection == tr["about_panel"]:
+    st.markdown(
+        """
+        <div class="about-app-details">
+            <h2>About Vektor AI</h2>
+            <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
+            <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
+            
+            <h3>System Overview</h3>
+            <p>Vektor AI is a highly specialized computing ecosystem engineered to optimize modern developer workflows, data orchestration models, and parallel multi-agent executions. It cleanly bridges high-end technical architectures with functional daily utilities, giving engineering teams direct command arrays through a unified secure local operational matrix.</p>
+            
+            <h3>Key Core Modules</h3>
+            <ul>
+                <li><strong>Sovereign Architect Engine:</strong> Manages primary parsing pipelines, workflow execution trees, and global workspace states.</li>
+                <li><strong>Reconnaissance Node:</strong> Directs background network indexing, commodity matrix arrays, vulnerability testing loops, and system dependency telemetry.</li>
+                <li><strong>Bio Archive Module:</strong> Houses encrypted vaults for secure credential parameters, local workspace profile states, and cryptographic asset tokens.</li>
+            </ul>
+
+            <h3>How to Navigate Vektor AI</h3>
+            <ol>
+                <li><strong>System Workspace Control:</strong> Select specialized operational targets or update pipeline requirements directly using the central drop-down selector parameters.</li>
+                <li><strong>Persistent Access Bar:</strong> Toggle standard sidebar configurations with fluid movement. The sidebar maintains a persistent open sliver footprint, keeping interaction targets discoverable at all times.</li>
+                <li><strong>Cross-Platform Infrastructure:</strong> Easily pull local runtime profiles, download standalone Android APK binaries, or launch active parallel vision instances straight from your profile workspace notepad and foundry modules.</li>
+            </ol>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 st.write("---")
 st.markdown("## 💎 Premium Asset Allocation & Macro Shock Simulator")
 st.caption("Strategic Decision Engine for High-Net-Worth Portfolios and Enterprise Capital")
@@ -865,6 +1102,7 @@ with st.container():
 
     if st.button("⚡ Run Portfolio Stress-Test & Core Diagnostics", use_container_width=True):
         st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
+        
         growth_cap = liquidity_reserve * (venture_allocation / 100.0)
         hedge_cap = liquidity_reserve * (commodity_hedge / 100.0)
         conservative_remainder = liquidity_reserve - (growth_cap + hedge_cap)
