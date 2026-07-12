@@ -22,7 +22,7 @@ PINS_FILE = ".vektor_activation_pins.json"
 # AUTHENTICATION & STORAGE UTILITIES
 # ==========================================
 def encode_cred(text):
-    return base64.b64encode(text.encode()).decode()
+    return base64.b64encode(text.encode()).decode() grade
 
 def load_vault():
     if os.path.exists(VAULT_FILE):
@@ -181,8 +181,6 @@ components.html(
     height=0,
 )
 
-
-
 st.markdown("""
     <style>
     :root {
@@ -204,7 +202,6 @@ st.markdown("""
         display: block !important;
     }
     
-    /* Increased top padding boundary to prevent header and menu from overlapping content */
     .block-container {
         padding-top: 3.5rem !important;
         padding-bottom: 1rem !important;
@@ -217,7 +214,6 @@ st.markdown("""
     .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox>div>div, .stNumberInput>div>div>input { background-color: #121626 !important; color: #ffffff !important; border: 1px solid #1f293d !important; border-radius: 10px !important; }
     .feature-card { background: rgba(18, 22, 38, 0.6); border: 1px solid #1f293d; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.05); }
     
-    /* Added top margin cushion to push the clock cleanly below top bar controls */
     .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-top: 10px; margin-bottom: 15px; }
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
@@ -234,13 +230,11 @@ with col_lang2:
 
 tr = LANG_DATA.get(st.session_state.lang, LANG_DATA["English"])
 
-# PINNED LIVE CLOCK ADJUSTED FOR TIMEZONE ACCURACY (WAT)
 with col_lang1:
     clock_placeholder = st.empty()
     current_time_str = datetime.now(ZoneInfo('Africa/Lagos')).strftime("%Y-%m-%d %H:%M:%S")
     clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
-# Secure API Auto-Engine Connection
 st.session_state.groq_key = os.environ.get("GROQ_API_KEY", "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")
 client = Groq(api_key=st.session_state.groq_key)
 
@@ -268,14 +262,11 @@ def render_security_gate():
             if st.button(tr["btn_auth"], use_container_width=True):
                 vault = load_vault()
                 if encode_cred(input_user) in vault and vault[encode_cred(input_user)] == encode_cred(input_pass):
-                    
-                    # TRIAL AND EXPIRY CHECK AGENT
                     metrics = load_admin_metrics()
                     u_key = encode_cred(input_user)
                     if u_key in metrics:
                         user_meta = metrics[u_key]
                         expiry_time_str = user_meta.get("license_expiry")
-                        
                         is_unpaid = user_meta.get("payment_status", "Unpaid") != "Paid"
                         is_expired = False
                         if expiry_time_str:
@@ -283,20 +274,13 @@ def render_security_gate():
                         
                         if is_unpaid and is_expired:
                             st.error("🚨 Your Free Access License Has Expired!")
-                            st.write("Please paste a valid structural verification activation key code below to update your operational window matrix.")
-                            
                             activation_input = st.text_input("Enter Activation PIN (e.g., VK-XXXX-XXXX):", key="activation_pin_box")
                             if st.button("🔓 Authenticate & Apply Key", use_container_width=True):
                                 pins_db = load_pins()
                                 if activation_input in pins_db and pins_db[activation_input]["status"] == "Unused":
-                                    pin_details = pins_db[activation_input]
-                                    
-                                    # Flag the token as redeemed
                                     pins_db[activation_input]["status"] = "Claimed"
                                     pins_db[activation_input]["claimed_by"] = input_user
                                     save_pins(pins_db)
-                                    
-                                    # Apply new timeline variables
                                     if pin_details["is_forever"]:
                                         metrics[u_key]["payment_status"] = "Paid"
                                     else:
@@ -304,13 +288,8 @@ def render_security_gate():
                                         new_expiry = datetime.now(ZoneInfo('Africa/Lagos')) + timedelta(days=days_extension)
                                         metrics[u_key]["license_expiry"] = new_expiry.strftime("%Y-%m-%d %H:%M:%S")
                                         metrics[u_key]["payment_status"] = "Unpaid"
-                                        
                                     save_admin_metrics(metrics)
-                                    st.success("🎉 Activation Successful! Access Window Granted. Please click Authorize Access again.")
-                                    time.sleep(1)
                                     st.rerun()
-                                else:
-                                    st.error("🚨 Invalid or already claimed Activation PIN.")
                             st.stop()
                     
                     st.session_state.authenticated = True
@@ -331,7 +310,7 @@ def render_security_gate():
                     if encode_cred(new_user) in vault: st.error("🚨 Account exists.")
                     else:
                         save_to_vault(new_user, new_pass)
-                        st.success("Workspace Provisioned! You have been granted a 1-Week Free Trial balance.")
+                        st.success("Workspace Provisioned!")
     st.stop()
 
 if not st.session_state.authenticated: render_security_gate()
@@ -357,11 +336,6 @@ with st.sidebar:
         tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
     ])
     st.write("---")
-# ==========================================
-# DYNAMIC MODULE EXECUTION ROUTER
-# ==========================================
-# Your module execution logic (if module_selection == ...) continues below here...
-
     
     st.markdown("### 🏛️ Dedicated Workspaces")
     if st.button("📝 Open Fullscreen Notepad", use_container_width=True):
@@ -398,7 +372,6 @@ with st.sidebar:
             st.session_state[key] = ""
             save_history(st.session_state.current_user, key.replace("_store", ""), "")
         save_history(st.session_state.current_user, "chat", [])
-        st.toast("Local persistent records flushed cleanly!")
         st.rerun()
     if st.button(tr["logout"], use_container_width=True):
         metrics = load_admin_metrics()
@@ -481,7 +454,6 @@ if st.session_state.active_view == "NOTEPAD":
                 st.code(historical_note)
                 if st.button(f"🔄 Reload Log File #{index + 1} Into Main Text Box", key=f"reload_note_{index}"):
                     save_notepad(st.session_state.current_user, historical_note, saved_history)
-                    st.toast("Note loaded successfully into editor view!")
                     st.rerun()
     else:
         st.caption("No historical notes logged inside the local workspace matrix yet.")
@@ -598,7 +570,6 @@ elif st.session_state.active_view == "BILLING":
     with col_b1:
         st.markdown("### 📊 Active Subscription Parameter Metrics")
         user_meta_profile = load_admin_metrics().get(encode_cred(st.session_state.current_user), {})
-        
         st.write(f"**Account Identity Space:** {st.session_state.current_user}")
         st.write(f"**Current Structural Tier Status:** `{user_meta_profile.get('payment_status', 'Unpaid')}`")
         st.write(f"**Computation Lifespan End Threshold:** `{user_meta_profile.get('license_expiry', 'N/A')}`")
@@ -606,27 +577,9 @@ elif st.session_state.active_view == "BILLING":
     with col_b2:
         st.markdown("<div class='billing-card'>", unsafe_allow_html=True)
 
-    st.markdown(
-        "<h4>👑 Upgrade to Unlimited Sovereign Space</h4>",
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "Unlock unrestricted model context pipelines, unlimited local "
-        "vector database indices, and premium risk tools.\n\n"
-        "📞 Contact Management: +2348024300891\n"
-        "For activation codes and payment bank details. Thank you."
-    )
-
-    st.markdown(
-        """
-        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
-        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
-        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
-        """,
-        unsafe_allow_html=True
-    )
-
+    st.markdown("<h4>👑 Upgrade to Unlimited Sovereign Space</h4>", unsafe_allow_html=True)
+    st.write("Unlock unrestricted model context pipelines, unlimited local vector database indices, and premium risk tools.\n\n📞 Contact Management: +2348024300891\nFor activation codes and payment bank details. Thank you.")
+    st.markdown("<h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3><h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3><h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
         
     st.write("---")
@@ -639,36 +592,57 @@ elif st.session_state.active_view == "BILLING":
                 pin_info = pins_database[manual_invoice_pin]
                 user_hashed_key = encode_cred(st.session_state.current_user)
                 all_metrics = load_admin_metrics()
-                
                 pins_database[manual_invoice_pin]["status"] = "Claimed"
                 pins_database[manual_invoice_pin]["claimed_by"] = st.session_state.current_user
                 save_pins(pins_database)
-                
                 if pin_info["is_forever"]:
                     all_metrics[user_hashed_key]["payment_status"] = "Paid"
                 else:
                     added_days = pin_info["days_allotted"]
                     current_exp_str = all_metrics[user_hashed_key].get("license_expiry")
-                    
                     if current_exp_str and datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos')) > datetime.now(ZoneInfo('Africa/Lagos')):
                         base_datetime = datetime.strptime(current_exp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo('Africa/Lagos'))
                     else:
                         base_datetime = datetime.now(ZoneInfo('Africa/Lagos'))
-                        
                     new_computed_exp = base_datetime + timedelta(days=added_days)
                     all_metrics[user_hashed_key]["license_expiry"] = new_computed_exp.strftime("%Y-%m-%d %H:%M:%S")
                     all_metrics[user_hashed_key]["payment_status"] = "Unpaid"
-                    
                 save_admin_metrics(all_metrics)
-                st.success("🎉 Matrix Timeline Extension Applied! Click below to return.")
-                time.sleep(1)
                 st.rerun()
-            else:
-                st.error("🚨 Specified verification key index string is invalid or already consumed.")
     st.stop()
 
 # SCREEN 4: MASTER DASHBOARD BASE PLATFORM
 st.markdown(f"<div class='cyber-logo'>{tr['title']}</div>", unsafe_allow_html=True)
+st.write("---")
+
+# =========================================================
+# TALABI DAVID ADEOLUWA PUBLIC SEARCH ENGINE INDEXING BLOCK
+# =========================================================
+st.markdown("### 🌐 SOVEREIGN ARCHITECT RECON & BIO ARCHIVE")
+col_profile_img, col_profile_bio = st.columns([1, 2])
+
+with col_profile_img:
+    if os.path.exists("david.png"):
+        st.image("david.png", caption="Talabi David Adeoluwa", use_container_width=True)
+    else:
+        st.info("📷 System Node: Please upload your photo to GitHub and name the file exactly 'david.png' to render your profile portrait layout.")
+
+with col_profile_bio:
+    st.markdown("#### **Talabi David Adeoluwa**")
+    st.caption("🚀 Programmer // Software Developer // Systems Engineer // Tech Entrepreneur")
+    st.write(
+        "I am Talabi David Adeoluwa, a passionate programmer, developer, engineer, and student entrepreneur. "
+        "Driven by innovation, I focus on building tools that simplify technology and empower user workflows. "
+        "I am the inventor of Vektor AI—a high-performance multi-agent workspace matrix—and continue to design "
+        "cutting-edge software solutions that bridge the gap between complex engineering and everyday utility."
+    )
+    
+    col_dl_btn1, col_dl_btn2 = st.columns(2)
+    with col_dl_btn1:
+        st.link_button("📲 Download Android APK App", "https://tinyurl.com/VektorAI", use_container_width=True)
+    with col_dl_btn2:
+        st.link_button("🌐 Open Live Sovereign WebApp", "https://my-vector-ai-app.onrender.com", use_container_width=True)
+
 st.write("---")
 
 st.markdown("### 🚀 Dynamic Workspace Hot-Keys")
@@ -891,7 +865,6 @@ with st.container():
 
     if st.button("⚡ Run Portfolio Stress-Test & Core Diagnostics", use_container_width=True):
         st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
-        
         growth_cap = liquidity_reserve * (venture_allocation / 100.0)
         hedge_cap = liquidity_reserve * (commodity_hedge / 100.0)
         conservative_remainder = liquidity_reserve - (growth_cap + hedge_cap)
