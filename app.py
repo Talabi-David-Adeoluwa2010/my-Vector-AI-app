@@ -165,29 +165,40 @@ st.set_page_config(page_title="Vektor AI", layout="wide")
 
 st.markdown("""
     <style>
-    /* Absolute global lockdown for top and bottom cloud navigation wrapper controls */
-    iframe, header, footer, #MainMenu, 
-    [data-testid="stHeader"], 
+    /* Ensure the top header bar and its three-dots action menu remain completely visible */
+    header[data-testid="stHeader"] {
+        display: flex !important;
+        visibility: visible !important;
+    }
+    #MainMenu, [data-testid="stActionButton"] {
+        visibility: visible !important;
+        display: inline-block !important;
+    }
+    
+    /* Completely hide the bottom GitHub Fork button link from the header layout */
+    header[data-testid="stHeader"] a, 
+    header[data-testid="stHeader"] iframe {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Target and remove the entire bottom-right toolbar (Crown & Hosted with Streamlit buttons) */
+    footer,
     [data-testid="stStatusWidget"],
-    [data-testid="stDecoration"],
-    [data-testid="stActionButton"],
     .stStatusWidget,
-    .stViewerToolbar,
     div[class*="stViewerToolbar"],
     div[class*="stStatusWidget"],
     footer[class*="st-"] {
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
-        width: 0px !important;
         opacity: 0 !important;
-        pointer-events: none !important;
     }
-    
-    /* Clean up container layout padding rules */
+
+    /* Clean up container padding rules */
     .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 1.5rem !important;
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
     
     /* Core App design matrix layout constants */
@@ -202,6 +213,7 @@ st.markdown("""
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
