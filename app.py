@@ -13,14 +13,16 @@ import io
 import urllib.parse
 import streamlit.components.v1 as components
 
+# File Paths
 VAULT_FILE = ".vektor_vault.json"
 HISTORY_FILE = ".vektor_history.json"
 NOTEPAD_FILE = ".vektor_notepad.json"
 METRICS_FILE = ".vektor_admin_metrics.json"
 PINS_FILE = ".vektor_activation_pins.json"
+SESSION_FILE = ".vektor_session.json"  # Keeps users logged in across application restarts
 
 # ==========================================
-# AUTHENTICATION & STORAGE UTILITIES
+# AUTHENTICATION, STORAGE & PERSISTENCE UTILITIES
 # ==========================================
 def encode_cred(text):
     return base64.b64encode(text.encode()).decode()
@@ -28,14 +30,17 @@ def encode_cred(text):
 def load_vault():
     if os.path.exists(VAULT_FILE):
         try:
-            with open(VAULT_FILE, "r") as f: return json.load(f)
-        except: return {}
+            with open(VAULT_FILE, "r") as f: 
+                return json.load(f)
+        except: 
+            return {}
     return {}
 
 def save_to_vault(username, password):
     vault = load_vault()
     vault[encode_cred(username)] = encode_cred(password)
-    with open(VAULT_FILE, "w") as f: json.dump(vault, f)
+    with open(VAULT_FILE, "w") as f: 
+        json.dump(vault, f)
     track_user_activity(username, action="register")
 
 def load_history(username):
@@ -44,19 +49,24 @@ def load_history(username):
             with open(HISTORY_FILE, "r") as f:
                 full_history = json.load(f)
                 return full_history.get(encode_cred(username), {})
-        except: return {}
+        except: 
+            return {}
     return {}
 
 def save_history(username, key, data):
     full_history = {}
     if os.path.exists(HISTORY_FILE):
         try:
-            with open(HISTORY_FILE, "r") as f: full_history = json.load(f)
-        except: pass
+            with open(HISTORY_FILE, "r") as f: 
+                full_history = json.load(f)
+        except: 
+            pass
     user_key = encode_cred(username)
-    if user_key not in full_history: full_history[user_key] = {}
+    if user_key not in full_history: 
+        full_history[user_key] = {}
     full_history[user_key][key] = data
-    with open(HISTORY_FILE, "w") as f: json.dump(full_history, f)
+    with open(HISTORY_FILE, "w") as f: 
+        json.dump(full_history, f)
 
 def load_notepad(username):
     if os.path.exists(NOTEPAD_FILE):
@@ -67,17 +77,46 @@ def load_notepad(username):
                 if isinstance(user_data, str):
                     return {"current": user_data, "history": []}
                 return user_data
-        except: return {"current": "", "history": []}
+        except: 
+            return {"current": "", "history": []}
     return {"current": "", "history": []}
 
 def save_notepad(username, content, history_list):
     notes = {}
     if os.path.exists(NOTEPAD_FILE):
         try:
-            with open(NOTEPAD_FILE, "r") as f: notes = json.load(f)
-        except: pass
+            with open(NOTEPAD_FILE, "r") as f: 
+                notes = json.load(f)
+        except: 
+            pass
     notes[encode_cred(username)] = {"current": content, "history": history_list}
-    with open(NOTEPAD_FILE, "w") as f: json.dump(notes, f)
+    with open(NOTEPAD_FILE, "w") as f: 
+        json.dump(notes, f)
+
+# Persistent Auto-Login File Handlers
+def save_session(username):
+    try:
+        with open(SESSION_FILE, "w") as f:
+            json.dump({"active_user": username}, f)
+    except:
+        pass
+
+def load_session():
+    if os.path.exists(SESSION_FILE):
+        try:
+            with open(SESSION_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("active_user")
+        except:
+            return None
+    return None
+
+def clear_session():
+    if os.path.exists(SESSION_FILE):
+        try:
+            os.remove(SESSION_FILE)
+        except:
+            pass
 
 # ==========================================
 # BACKGROUND USER ACTIVITY METRICS AGENT
@@ -85,22 +124,28 @@ def save_notepad(username, content, history_list):
 def load_admin_metrics():
     if os.path.exists(METRICS_FILE):
         try:
-            with open(METRICS_FILE, "r") as f: return json.load(f)
-        except: return {}
+            with open(METRICS_FILE, "r") as f: 
+                return json.load(f)
+        except: 
+            return {}
     return {}
 
 def save_admin_metrics(data):
-    with open(METRICS_FILE, "w") as f: json.dump(data, f)
+    with open(METRICS_FILE, "w") as f: 
+        json.dump(data, f)
 
 def load_pins():
     if os.path.exists(PINS_FILE):
         try:
-            with open(PINS_FILE, "r") as f: return json.load(f)
-        except: return {}
+            with open(PINS_FILE, "r") as f: 
+                return json.load(f)
+        except: 
+            return {}
     return {}
 
 def save_pins(data):
-    with open(PINS_FILE, "w") as f: json.dump(data, f)
+    with open(PINS_FILE, "w") as f: 
+        json.dump(data, f)
 
 def track_user_activity(username, action="login"):
     metrics = load_admin_metrics()
@@ -118,7 +163,7 @@ def track_user_activity(username, action="login"):
         }
     else:
         metrics[u_key]["last_active"] = now_str
-        if action == "login" or action == "heartbeat":
+        if action in ["login", "heartbeat"]:
             metrics[u_key]["status"] = "Active"
             
     save_admin_metrics(metrics)
@@ -183,12 +228,24 @@ components.html(
     height=0,
 )
 
-# Initialize Session variables
-if "loading_complete" not in st.session_state: st.session_state.loading_complete = False
-if "authenticated" not in st.session_state: st.session_state.authenticated = False
-if "current_user" not in st.session_state: st.session_state.current_user = ""
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
-if "active_view" not in st.session_state: st.session_state.active_view = "HOME"
+# Initialize Session variables with local persistence hook
+saved_user = load_session()
+if "loading_complete" not in st.session_state: 
+    st.session_state.loading_complete = False
+
+if saved_user:
+    st.session_state.authenticated = True
+    st.session_state.current_user = saved_user
+else:
+    if "authenticated" not in st.session_state: 
+        st.session_state.authenticated = False
+    if "current_user" not in st.session_state: 
+        st.session_state.current_user = ""
+
+if "chat_history" not in st.session_state: 
+    st.session_state.chat_history = []
+if "active_view" not in st.session_state: 
+    st.session_state.active_view = "HOME"
 
 # ==========================================================
 # 1. BEAUTIFUL HIGH-TECH LOADING SCREEN / CUSTOM SPLASH PAGE
@@ -369,9 +426,18 @@ st.markdown("""
         background-color: #05070f !important;
     }
     
-    [data-testid="stSidebar"] {
-        min-width: 60px !important;
-        transition: transform 0.3s ease !important;
+    /* Reveal Closed/Collapsed Sidebar slightly by peeking 15px from the left with a glowing neon border */
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(calc(-100% + 15px)) !important;
+        border-right: 3px solid #00f2fe !important;
+        box-shadow: 5px 0px 20px rgba(0, 242, 254, 0.4) !important;
+        transition: transform 0.3s ease-in-out !important;
+        z-index: 99999 !important;
+    }
+
+    /* Standard transition rules for smooth opening */
+    section[data-testid="stSidebar"] {
+        transition: transform 0.3s ease-in-out, width 0.3s ease-in-out !important;
     }
     
     [data-testid="sidebar-toggle"] {
@@ -394,13 +460,6 @@ st.markdown("""
     .live-clock { color: #00f2fe; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; background: rgba(0, 242, 254, 0.1); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(0, 242, 254, 0.3); display: inline-block; margin-top: 10px; margin-bottom: 15px; }
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
-    
-    .about-app-details { background-color: #121626; border: 1px solid #1f293d; border-radius: 16px; padding: 30px; line-height: 1.6; }
-    .about-app-details h2 { color: #ffffff; border-bottom: 1px solid #1f293d; padding-bottom: 12px; margin-top: 0; }
-    .about-app-details h3 { color: #00f2fe; margin-top: 25px; margin-bottom: 8px; }
-    .about-app-details ul, .about-app-details ol { padding-left: 22px; color: #94a3b8; }
-    .about-app-details li { margin-bottom: 8px; }
-    .about-app-details strong { color: #ffffff; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -465,10 +524,12 @@ def render_security_gate():
                                 if activation_input in pins_db and pins_db[activation_input]["status"] == "Unused":
                                     pin_details = pins_db[activation_input]
                                     
+                                    # Flag the token as redeemed
                                     pins_db[activation_input]["status"] = "Claimed"
                                     pins_db[activation_input]["claimed_by"] = input_user
                                     save_pins(pins_db)
                                     
+                                    # Apply new timeline variables
                                     if pin_details["is_forever"]:
                                         metrics[u_key]["payment_status"] = "Paid"
                                     else:
@@ -485,6 +546,8 @@ def render_security_gate():
                                     st.error("🚨 Invalid or already claimed Activation PIN.")
                             st.stop()
                     
+                    # Store login credentials persistently to session file
+                    save_session(input_user)
                     st.session_state.authenticated = True
                     st.session_state.current_user = input_user
                     track_user_activity(input_user, action="login")
@@ -493,20 +556,23 @@ def render_security_gate():
                     for k in ["briefing", "draft", "structure", "cross", "tracker", "sandbox", "predictor", "indexer", "runway"]:
                         st.session_state[f"{k}_store"] = user_history.get(k, "")
                     st.rerun()
-                else: st.error("🚨 Access Denied.")
+                else: 
+                    st.error("🚨 Access Denied.")
         with auth_mode[1]:
             new_user = st.text_input(tr["username"], key="reg_user")
             new_pass = st.text_input(tr["password"], type="password", key="reg_pass")
             if st.button(tr["btn_reg"], use_container_width=True):
                 if new_user.strip() != "" and len(new_pass) >= 4:
                     vault = load_vault()
-                    if encode_cred(new_user) in vault: st.error("🚨 Account exists.")
+                    if encode_cred(new_user) in vault: 
+                        st.error("🚨 Account exists.")
                     else:
                         save_to_vault(new_user, new_pass)
                         st.success("Workspace Provisioned! You have been granted a 1-Week Free Trial balance.")
     st.stop()
 
-if not st.session_state.authenticated: render_security_gate()
+if not st.session_state.authenticated: 
+    render_security_gate()
 
 def query_standalone_engine(prompt):
     try:
@@ -516,7 +582,8 @@ def query_standalone_engine(prompt):
             temperature=0.3
         )
         return completion.choices[0].message.content
-    except Exception as e: return f"Cloud Connection Interrupted: {str(e)}"
+    except Exception as e: 
+        return f"Cloud Connection Interrupted: {str(e)}"
 
 track_user_activity(st.session_state.current_user, action="heartbeat")
 
@@ -541,6 +608,7 @@ with st.sidebar:
     if st.button("💳 Billing & Access Management", use_container_width=True):
         st.session_state.active_view = "BILLING"
         st.rerun()
+    # Dedicated Standalone About Application Button in the Sidebar
     if st.button("ℹ️ About Application", use_container_width=True):
         st.session_state.active_view = "ABOUT"
         st.rerun()
@@ -550,16 +618,26 @@ with st.sidebar:
     export_filename = st.text_input(tr["save_fn"], value="vektor_report.txt")
     
     current_export_payload = f"Vektor AI Operational Log Archive\nUser: {st.session_state.current_user}\nModule Target: {module_selection}\n---\n"
-    if module_selection == tr["oracle_chat"]: current_export_payload += json.dumps(st.session_state.get("chat_history", []), indent=2)
-    elif module_selection == tr["exec_brief"]: current_export_payload += st.session_state.get("briefing_store", "")
-    elif module_selection == tr["composer"]: current_export_payload += st.session_state.get("draft_store", "")
-    elif module_selection == tr["extractor"]: current_export_payload += st.session_state.get("structure_store", "")
-    elif module_selection == tr["cross_file"]: current_export_payload += st.session_state.get("cross_store", "")
-    elif module_selection == tr["tracker"]: current_export_payload += st.session_state.get("tracker_store", "")
-    elif module_selection == tr["sandbox"]: current_export_payload += st.session_state.get("sandbox_store", "")
-    elif module_selection == tr["predictor"]: current_export_payload += st.session_state.get("predictor_store", "")
-    elif module_selection == tr["indexer"]: current_export_payload += st.session_state.get("indexer_store", "")
-    elif module_selection == tr["runway_plan"]: current_export_payload += st.session_state.get("runway_store", "")
+    if module_selection == tr["oracle_chat"]: 
+        current_export_payload += json.dumps(st.session_state.get("chat_history", []), indent=2)
+    elif module_selection == tr["exec_brief"]: 
+        current_export_payload += st.session_state.get("briefing_store", "")
+    elif module_selection == tr["composer"]: 
+        current_export_payload += st.session_state.get("draft_store", "")
+    elif module_selection == tr["extractor"]: 
+        current_export_payload += st.session_state.get("structure_store", "")
+    elif module_selection == tr["cross_file"]: 
+        current_export_payload += st.session_state.get("cross_store", "")
+    elif module_selection == tr["tracker"]: 
+        current_export_payload += st.session_state.get("tracker_store", "")
+    elif module_selection == tr["sandbox"]: 
+        current_export_payload += st.session_state.get("sandbox_store", "")
+    elif module_selection == tr["predictor"]: 
+        current_export_payload += st.session_state.get("predictor_store", "")
+    elif module_selection == tr["indexer"]: 
+        current_export_payload += st.session_state.get("indexer_store", "")
+    elif module_selection == tr["runway_plan"]: 
+        current_export_payload += st.session_state.get("runway_store", "")
 
     st.download_button(label=tr["dl_lbl"], data=current_export_payload, file_name=export_filename, mime="text/plain", use_container_width=True)
     st.write("---")
@@ -577,6 +655,7 @@ with st.sidebar:
         if u_key in metrics:
             metrics[u_key]["status"] = "Inactive"
             save_admin_metrics(metrics)
+        clear_session()  # Erase the stored session JSON on logout
         st.session_state.authenticated = False
         st.rerun()
 
@@ -791,9 +870,9 @@ elif st.session_state.active_view == "BILLING":
 
     st.markdown(
         """
-        <h3 style='color:#3b82f6;'>$3.99 = ₦5,499 / Week</h3>
-        <h3 style='color:#3b82f6;'>$11.99 = ₦16,599 / Month</h3>
-        <h3 style='color:#3b82f6;'>$22.99 = ₦30,199 / 2 Months</h3>
+        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
+        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
+        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
         """,
         unsafe_allow_html=True
     )
@@ -838,7 +917,7 @@ elif st.session_state.active_view == "BILLING":
                 st.error("🚨 Specified verification key index string is invalid or already consumed.")
     st.stop()
 
-# SCREEN 4: DEDICATED FULLSCREEN ABOUT APPLICATION VIEW
+# SCREEN 4: DEDICATED FULLSCREEN ABOUT APPLICATION VIEW (CLEAN MARKDOWN - NO RAW HTML CODES)
 elif st.session_state.active_view == "ABOUT":
     st.markdown("<div class='cyber-logo'>ℹ️ ABOUT VEKTOR AI</div>", unsafe_allow_html=True)
     st.caption("Sovereign Information Portal — System Blueprint & Operations Manual")
@@ -849,44 +928,47 @@ elif st.session_state.active_view == "ABOUT":
         
     st.write("---")
     
-    about_html_content = """
-    <div class="about-app-details">
-        <h2>About Vektor AI</h2>
-        <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
-        <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
-        <p>Vektor AI is a cutting-edge computing ecosystem engineered to streamline workflows, data management, and AI execution blocks. It bridges deep technical capability with functional, daily-use developer utilities, empowering users with instant command access through a unified local interface.</p>
+    st.title("Welcome to Vektor AI")
+    st.markdown("**Version:** 1.0.0 Stable Matrix")
+    st.markdown("**Architecture:** Multi-Agent Autonomous Workspace System")
+    
+    st.info(
+        "Vektor AI is a cutting-edge computing ecosystem engineered to streamline workflows, data management, and AI execution blocks. "
+        "It bridges deep technical capability with functional, daily-use developer utilities, empowering users with instant command access through a unified local interface."
+    )
+    
+    st.subheader("💡 How to Navigate Around the App")
+    st.markdown(
+        """
+        1. **Core Engine Control**: Use the drop-down box at the top of the left sidebar to cycle through modules like the *Oracle Chat*, *Executive Briefing Engine*, or *Resource Predictor*.
+        2. **Dedicated Workspaces**: Switch between fullscreen environments (*Notepad*, *Vision Foundry*, *Billing Ledger*, and this manual) by clicking their respective dedicated buttons in the sidebar.
+        3. **Resetting Cache**: If you ever need to clear local historical parameters, click **Clear Cache Data** in the sidebar to flush files cleanly.
+        """
+    )
+
+    st.subheader("⚙️ Things the App Can Do")
+    st.markdown(
+        """
+        * **Dynamic Pricing Oracle**: Fetch current global market commodity evaluations instantly and convert values into any target currency.
+        * **Document Processing (PDF)**: Ingest multi-page documents to execute context chats, cross-file audits, structural content extraction, and key milestone logging.
+        * **Multimodal Foundry**: Render photorealistic generative imagery on demand, create custom narration scripts, and access real-time device camera feeds with dynamic filters and analysis.
+        * **Runway & Risk Simulators**: Process liability spreadsheets, compute capitalization structures, and stress-test target portfolios against simulated macroeconomic shock scenarios.
+        """
+    )
+
+    st.subheader("💳 How to Pay for the App")
+    st.markdown(
+        """
+        Vektor AI works on a flexible subscription model. Follow these simple steps to activate or renew your license:
         
-        <h3>How to Navigate Around the App</h3>
-        <ol>
-            <li><strong>Core Engine Control</strong>: Use the drop-down box at the top of the left sidebar to cycle through modules like the Oracle Chat, Executive Briefing Engine, or Resource Predictor.</li>
-            <li><strong>Dedicated Workspaces</strong>: Switch between fullscreen environments (Notepad, Vision Foundry, Billing Ledger, and this manual) by clicking their respective dedicated buttons in the sidebar.</li>
-            <li><strong>Resetting Cache</strong>: If you ever need to clear local historical parameters, click <em>"Clear Cache Data"</em> in the sidebar to flush files cleanly.</li>
-        </ol>
-
-        <h3>Things the App Can Do</h3>
-        <ul>
-            <li><strong>Dynamic Pricing Oracle</strong>: Fetch current global market commodity evaluations instantly and convert values into any target currency.</li>
-            <li><strong>Document Processing (PDF)</strong>: Ingest multi-page documents to execute context chats, cross-file audits, structural content extraction, and key milestone logging.</li>
-            <li><strong>Multimodal Foundry</strong>: Render photorealistic generative imagery on demand, create custom narration scripts, and access real-time device camera feeds with dynamic filters and analysis.</li>
-            <li><strong>Runway & Risk Simulators</strong>: Process liability spreadsheets, compute capitalization structures, and stress-test target portfolios against simulated macroeconomic shock scenarios.</li>
-        </ul>
-
-        <h3>How to Pay for the App</h3>
-        <p>Vektor AI works on a flexible subscription model. Follow these simple steps to activate or renew your license:</p>
-        <ol>
-            <li><strong>Contact Admin</strong>: Reach out directly via WhatsApp or Phone to register your payment at <strong>+2348024300891</strong>.</li>
-            <li><strong>Select a Billing Tier</strong>:
-                <ul>
-                    <li><strong>1 Week Plan</strong>: $3.99 (~ ₦5,499)</li>
-                    <li><strong>1 Month Plan</strong>: $11.99 (~ ₦16,599)</li>
-                    <li><strong>2 Month Plan</strong>: $22.99 (~ ₦30,199)</li>
-                </ul>
-            </li>
-            <li><strong>Apply Your Key</strong>: Once payment is complete, the admin will generate a secure PIN (e.g., <code>VK-XXXX-XXXX</code>). Paste this code into either the login-block window or the <em>Billing & Access Management</em> portal to instantly extend your access matrix.</li>
-        </ol>
-    </div>
-    """
-    st.markdown(about_html_content, unsafe_allow_html=True)
+        1. **Contact Admin**: Reach out directly via WhatsApp or Phone to register your payment at **+2348024300891**.
+        2. **Select a Billing Tier**:
+            * **1 Week Plan**: $3.99 (~ ₦5,499)
+            * **1 Month Plan**: $11.99 (~ ₦16,599)
+            * **2 Month Plan**: $22.99 (~ ₦30,199)
+        3. **Apply Your Key**: Once payment is complete, the admin will generate a secure PIN (e.g., `VK-XXXX-XXXX`). Paste this code into either the login-block window or the *Billing & Access Management* portal to instantly extend your access matrix.
+        """
+    )
     st.stop()
 
 # SCREEN 5: MASTER DASHBOARD BASE PLATFORM
@@ -913,8 +995,10 @@ st.write("---")
 st.subheader(tr["search_title"])
 with st.container():
     col_s1, col_s2 = st.columns([3, 1])
-    with col_s1: search_item = st.text_input("Look up global commodity pricing:", placeholder=tr["search_ph"], key="g_search_bar")
-    with col_s2: target_currency = st.text_input(tr["curr_lbl"], value="₦ (NGN)", key="g_curr_bar")
+    with col_s1: 
+        search_item = st.text_input("Look up global commodity pricing:", placeholder=tr["search_ph"], key="g_search_bar")
+    with col_s2: 
+        target_currency = st.text_input(tr["curr_lbl"], value="₦ (NGN)", key="g_curr_bar")
     
     if st.button(tr["search_btn"], use_container_width=True):
         if search_item.strip() != "":
@@ -935,10 +1019,12 @@ if uploaded_files:
                 pdf_reader = PyPDF2.PdfReader(file)
                 for page in pdf_reader.pages:
                     page_text = page.extract_text()
-                    if page_text: text_accumulator += page_text + "\n"
+                    if page_text: 
+                        text_accumulator += page_text + "\n"
                 parsed_docs[file.name] = text_accumulator
                 full_raw_text += text_accumulator + "\n"
-            except Exception as e: st.error(f"Error on {file.name}: {str(e)}")
+            except Exception as e: 
+                st.error(f"Error on {file.name}: {str(e)}")
         st.session_state.document_dict = parsed_docs
         st.session_state.raw_context = full_raw_text
         st.toast(tr["success_ac"], icon="🔥")
@@ -961,16 +1047,21 @@ if module_selection == tr["comp_panel"]:
     try:
         data_list = [float(i.strip()) for i in custom_data_points.split(",") if i.strip() != ""]
         chart_data = pd.DataFrame({x_label: range(1, len(data_list) + 1), y_label: data_list}).set_index(x_label)
-        if chart_type == "Line Chart": st.line_chart(chart_data)
-        elif chart_type == "Bar Chart": st.bar_chart(chart_data)
-        elif chart_type == "Area Chart": st.area_chart(chart_data)
-    except: st.error("🚨 Formatting Error.")
+        if chart_type == "Line Chart": 
+            st.line_chart(chart_data)
+        elif chart_type == "Bar Chart": 
+            st.bar_chart(chart_data)
+        elif chart_type == "Area Chart": 
+            st.area_chart(chart_data)
+    except: 
+        st.error("🚨 Formatting Error.")
 
 elif module_selection == tr["oracle_chat"]:
     st.subheader(tr["oracle_chat"])
     user_query = st.text_input("Query data context:", placeholder="What are our core operational findings?")
     if user_query:
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Context:\n{st.session_state.raw_context[:4000]}\n\nQuestion: {user_query}\nAnswer in language {st.session_state.lang}:"
@@ -984,38 +1075,44 @@ elif module_selection == tr["oracle_chat"]:
 elif module_selection == tr["exec_brief"]:
     st.subheader(tr["exec_brief"])
     if st.button(tr["run_diag"], use_container_width=True):
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Using this text context:\n{st.session_state.raw_context[:4000]}\n\nProvide an executive briefing in language {st.session_state.lang}: 3 bullet summaries, key risk factors, and deadlines."
             st.session_state.briefing_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "briefing", st.session_state.briefing_store)
-    if st.session_state.get("briefing_store"): st.markdown(f"<div class='feature-card'>{st.session_state.briefing_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("briefing_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.briefing_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["composer"]:
     st.subheader(tr["composer"])
     style = st.selectbox("Style:", ["Professional Email", "Formal Memorandum", "Slack Alert"])
     notes = st.text_input("Special requests:", placeholder="Keep it direct.")
     if st.button(tr["calc_btn"], use_container_width=True):
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Context:\n{st.session_state.raw_context[:4000]}\n\nCompose a {style} in language {st.session_state.lang}. Special Instruction: {notes}"
             st.session_state.draft_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "draft", st.session_state.draft_store)
-    if st.session_state.get("draft_store"): st.markdown(f"<div class='feature-card'>{st.session_state.draft_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("draft_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.draft_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["extractor"]:
     st.subheader(tr["extractor"])
     target = st.text_input("Data to mine:", value="Names, Dates, Key Figures")
     if st.button(tr["calc_btn"], use_container_width=True):
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Context text:\n{st.session_state.raw_context[:4000]}\n\nExtract all information relating to {target} in language {st.session_state.lang}."
             st.session_state.structure_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "structure", st.session_state.structure_store)
-    if st.session_state.get("structure_store"): st.markdown(f"<div class='feature-card'>{st.session_state.structure_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("structure_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.structure_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["cross_file"]:
     st.subheader(tr["cross_file"])
@@ -1026,22 +1123,26 @@ elif module_selection == tr["cross_file"]:
         if st.button(tr["calc_btn"], use_container_width=True):
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             aggregated_context = ""
-            for name, content in st.session_state.document_dict.items(): aggregated_context += f"--- FILE: {name} ---\n{content[:2000]}\n"
+            for name, content in st.session_state.document_dict.items(): 
+                aggregated_context += f"--- FILE: {name} ---\n{content[:2000]}\n"
             prompt = f"Analyze these files in language {st.session_state.lang} for contradictions:\n{aggregated_context}\nDirective: {audit_query}"
             st.session_state.cross_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "cross", st.session_state.cross_store)
-    if st.session_state.get("cross_store"): st.markdown(f"<div class='feature-card'>{st.session_state.cross_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("cross_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.cross_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["tracker"]:
     st.subheader(tr["tracker"])
     if st.button(tr["calc_btn"], use_container_width=True):
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Extract timelines and task actions in language {st.session_state.lang} from:\n{st.session_state.raw_context[:4000]}"
             st.session_state.tracker_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "tracker", st.session_state.tracker_store)
-    if st.session_state.get("tracker_store"): st.markdown(f"<div class='feature-card'>{st.session_state.tracker_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("tracker_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.tracker_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["sandbox"]:
     st.subheader(tr["sandbox"])
@@ -1051,31 +1152,37 @@ elif module_selection == tr["sandbox"]:
         prompt = f"Act as an expert risk auditor. Stress-test this business idea in language {st.session_state.lang}: '{idea}'"
         st.session_state.sandbox_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "sandbox", st.session_state.sandbox_store)
-    if st.session_state.get("sandbox_store"): st.markdown(f"<div class='feature-card'>{st.session_state.sandbox_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("sandbox_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.sandbox_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["predictor"]:
     st.subheader(tr["predictor"])
     project_brief = st.text_area("Describe the project scope & technical requirements:")
     col_cfg1, col_cfg2 = st.columns(2)
-    with col_cfg1: tier_profile = st.selectbox("Strategy Profile:", ["Lean Bootstrap Strategy", "Standard Competitive Infrastructure", "Aggressive Scale Enterprise"])
-    with col_cfg2: contingency_buffer = st.slider("Buffer (%):", 5, 30, 15)
+    with col_cfg1: 
+        tier_profile = st.selectbox("Strategy Profile:", ["Lean Bootstrap Strategy", "Standard Competitive Infrastructure", "Aggressive Scale Enterprise"])
+    with col_cfg2: 
+        contingency_buffer = st.slider("Buffer (%):", 5, 30, 15)
     if st.button(tr["calc_btn"], use_container_width=True) and project_brief:
         st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
         prompt = f"Act as a tech project architect. Analyze brief: '{project_brief}'. Strategy: {tier_profile} with {contingency_buffer}% buffer. Report structural ranges using currency {target_currency} written in language {st.session_state.lang}."
         st.session_state.predictor_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "predictor", st.session_state.predictor_store)
-    if st.session_state.get("predictor_store"): st.markdown(f"<div class='feature-card'>{st.session_state.predictor_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("predictor_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.predictor_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["indexer"]:
     st.subheader(tr["indexer"])
     if st.button(tr["calc_btn"], use_container_width=True):
-        if not context_ready: st.error(tr["error_ingest"])
+        if not context_ready: 
+            st.error(tr["error_ingest"])
         else:
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
             prompt = f"Generate a technical index and metadata taxonomy tags in language {st.session_state.lang} for:\n{st.session_state.raw_context[:4000]}"
             st.session_state.indexer_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "indexer", st.session_state.indexer_store)
-    if st.session_state.get("indexer_store"): st.markdown(f"<div class='feature-card'>{st.session_state.indexer_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("indexer_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.indexer_store}</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["runway_plan"]:
     st.subheader(tr["runway_plan"])
@@ -1087,12 +1194,14 @@ elif module_selection == tr["runway_plan"]:
             pdf_read = PyPDF2.PdfReader(financial_doc)
             for page in pdf_read.pages:
                 t = page.extract_text()
-                if t: revenue_text += t + "\n"
+                if t: 
+                    revenue_text += t + "\n"
         st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
         prompt = f"Act as a virtual corporate CFO. Statement: '{revenue_text[:2000]}'. Expenses: {total_liabilities} in {target_currency}. Map items sold, calculate net remainder growth capital, and list step-by-step optimization tactics in language {st.session_state.lang}."
         st.session_state.runway_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
-    if st.session_state.get("runway_store"): st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
+    if st.session_state.get("runway_store"): 
+        st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
 
 st.write("---")
 st.markdown("## 💎 Premium Asset Allocation & Macro Shock Simulator")
