@@ -334,7 +334,6 @@ if not st.session_state.loading_complete:
             let loop = setInterval(() => {
                 if(width >= 100) {
                     clearInterval(loop);
-                    // Tell Streamlit framework that setup timeline is complete
                     window.parent.postMessage({type: 'streamlit:set_page_config', loading_done: true}, '*');
                     document.getElementById('loading-screen').style.display = 'none';
                 } else {
@@ -347,7 +346,6 @@ if not st.session_state.loading_complete:
         """,
         height=750,
     )
-    # Block further Python processing until countdown hits 100
     st.session_state.loading_complete = True
     time.sleep(3.6)
     st.rerun()
@@ -371,7 +369,6 @@ st.markdown("""
         background-color: #05070f !important;
     }
     
-    /* Persistent open-state sliver rules for the standard Streamlit sidebar wrapper */
     [data-testid="stSidebar"] {
         min-width: 60px !important;
         transition: transform 0.3s ease !important;
@@ -398,7 +395,6 @@ st.markdown("""
     .notification-banner { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border-left: 5px solid #a855f7; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2); }
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     
-    /* Custom Stylings for the New About Application Block UI */
     .about-app-details { background-color: #121626; border: 1px solid #1f293d; border-radius: 16px; padding: 30px; line-height: 1.6; }
     .about-app-details h2 { color: #ffffff; border-bottom: 1px solid #1f293d; padding-bottom: 12px; margin-top: 0; }
     .about-app-details h3 { color: #00f2fe; margin-top: 25px; margin-bottom: 8px; }
@@ -469,12 +465,10 @@ def render_security_gate():
                                 if activation_input in pins_db and pins_db[activation_input]["status"] == "Unused":
                                     pin_details = pins_db[activation_input]
                                     
-                                    # Flag the token as redeemed
                                     pins_db[activation_input]["status"] = "Claimed"
                                     pins_db[activation_input]["claimed_by"] = input_user
                                     save_pins(pins_db)
                                     
-                                    # Apply new timeline variables
                                     if pin_details["is_forever"]:
                                         metrics[u_key]["payment_status"] = "Paid"
                                     else:
@@ -531,7 +525,6 @@ with st.sidebar:
     st.markdown("<div class='cyber-logo' style='font-size: 1.8rem;'>⚡ VK-CORE</div>", unsafe_allow_html=True)
     st.caption(f"Logged as: **{st.session_state.current_user}**")
     
-    # "ℹ️ About" option has been REMOVED from this dropdown selection menu
     module_selection = st.selectbox(tr["nav_lbl"], [
         tr["comp_panel"], tr["oracle_chat"], tr["exec_brief"], tr["composer"], tr["extractor"], 
         tr["cross_file"], tr["tracker"], tr["sandbox"], tr["predictor"], tr["indexer"], tr["runway_plan"]
@@ -548,7 +541,6 @@ with st.sidebar:
     if st.button("💳 Billing & Access Management", use_container_width=True):
         st.session_state.active_view = "BILLING"
         st.rerun()
-    # NEW: Dedicated Standalone About Application Button in the Sidebar
     if st.button("ℹ️ About Application", use_container_width=True):
         st.session_state.active_view = "ABOUT"
         st.rerun()
@@ -799,9 +791,9 @@ elif st.session_state.active_view == "BILLING":
 
     st.markdown(
         """
-        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
-        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
-        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
+        <h3 style='color:#3b82f6;'>$3.99 = ₦5,499 / Week</h3>
+        <h3 style='color:#3b82f6;'>$11.99 = ₦16,599 / Month</h3>
+        <h3 style='color:#3b82f6;'>$22.99 = ₦30,199 / 2 Months</h3>
         """,
         unsafe_allow_html=True
     )
@@ -857,46 +849,44 @@ elif st.session_state.active_view == "ABOUT":
         
     st.write("---")
     
-    st.markdown(
-        """
-        <div class="about-app-details">
-            <h2>About Vektor AI</h2>
-            <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
-            <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
-            <p>Vektor AI is a cutting-edge computing ecosystem engineered to streamline workflows, data management, and AI execution blocks. It bridges deep technical capability with functional, daily-use developer utilities, empowering users with instant command access through a unified local interface.</p>
-            
-            <h3>How to Navigate Around the App</h3>
-            <ol>
-                <li><strong>Core Engine Control</strong>: Use the drop-down box at the top of the left sidebar to cycle through modules like the Oracle Chat, Executive Briefing Engine, or Resource Predictor.</li>
-                <li><strong>Dedicated Workspaces</strong>: Switch between fullscreen environments (Notepad, Vision Foundry, Billing Ledger, and this manual) by clicking their respective dedicated buttons in the sidebar.</li>
-                <li><strong>Resetting Cache</strong>: If you ever need to clear local historical parameters, click <em>"Clear Cache Data"</em> in the sidebar to flush files cleanly.</li>
-            </ol>
+    about_html_content = """
+    <div class="about-app-details">
+        <h2>About Vektor AI</h2>
+        <p><strong>Version:</strong> 1.0.0 Stable Matrix</p>
+        <p><strong>Architecture:</strong> Multi-Agent Autonomous Workspace System</p>
+        <p>Vektor AI is a cutting-edge computing ecosystem engineered to streamline workflows, data management, and AI execution blocks. It bridges deep technical capability with functional, daily-use developer utilities, empowering users with instant command access through a unified local interface.</p>
+        
+        <h3>How to Navigate Around the App</h3>
+        <ol>
+            <li><strong>Core Engine Control</strong>: Use the drop-down box at the top of the left sidebar to cycle through modules like the Oracle Chat, Executive Briefing Engine, or Resource Predictor.</li>
+            <li><strong>Dedicated Workspaces</strong>: Switch between fullscreen environments (Notepad, Vision Foundry, Billing Ledger, and this manual) by clicking their respective dedicated buttons in the sidebar.</li>
+            <li><strong>Resetting Cache</strong>: If you ever need to clear local historical parameters, click <em>"Clear Cache Data"</em> in the sidebar to flush files cleanly.</li>
+        </ol>
 
-            <h3>Things the App Can Do</h3>
-            <ul>
-                <li><strong>Dynamic Pricing Oracle</strong>: Fetch current global market commodity evaluations instantly and convert values into any target currency.</li>
-                <li><strong>Document Processing (PDF)</strong>: Ingest multi-page documents to execute context chats, cross-file audits, structural content extraction, and key milestone logging.</li>
-                <li><strong>Multimodal Foundry</strong>: Render photorealistic generative imagery on demand, create custom narration scripts, and access real-time device camera feeds with dynamic filters and analysis.</li>
-                <li><strong>Runway & Risk Simulators</strong>: Process liability spreadsheets, compute capitalization structures, and stress-test target portfolios against simulated macroeconomic shock scenarios.</li>
-            </ul>
+        <h3>Things the App Can Do</h3>
+        <ul>
+            <li><strong>Dynamic Pricing Oracle</strong>: Fetch current global market commodity evaluations instantly and convert values into any target currency.</li>
+            <li><strong>Document Processing (PDF)</strong>: Ingest multi-page documents to execute context chats, cross-file audits, structural content extraction, and key milestone logging.</li>
+            <li><strong>Multimodal Foundry</strong>: Render photorealistic generative imagery on demand, create custom narration scripts, and access real-time device camera feeds with dynamic filters and analysis.</li>
+            <li><strong>Runway & Risk Simulators</strong>: Process liability spreadsheets, compute capitalization structures, and stress-test target portfolios against simulated macroeconomic shock scenarios.</li>
+        </ul>
 
-            <h3>How to Pay for the App</h3>
-            <p>Vektor AI works on a flexible subscription model. Follow these simple steps to activate or renew your license:</p>
-            <ol>
-                <li><strong>Contact Admin</strong>: Reach out directly via WhatsApp or Phone to register your payment at <strong>+2348024300891</strong>.</li>
-                <li><strong>Select a Billing Tier</strong>:
-                    <ul>
-                        <li><strong>1 Week Plan</strong>: $3.99 (~ ₦5,499)</li>
-                        <li><strong>1 Month Plan</strong>: $11.99 (~ ₦16,599)</li>
-                        <li><strong>2 Month Plan</strong>: $22.99 (~ ₦30,199)</li>
-                    </ul>
-                </li>
-                <li><strong>Apply Your Key</strong>: Once payment is complete, the admin will generate a secure PIN (e.g., <code>VK-XXXX-XXXX</code>). Paste this code into either the login-block window or the <em>Billing & Access Management</em> portal to instantly extend your access matrix.</li>
-            </ol>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        <h3>How to Pay for the App</h3>
+        <p>Vektor AI works on a flexible subscription model. Follow these simple steps to activate or renew your license:</p>
+        <ol>
+            <li><strong>Contact Admin</strong>: Reach out directly via WhatsApp or Phone to register your payment at <strong>+2348024300891</strong>.</li>
+            <li><strong>Select a Billing Tier</strong>:
+                <ul>
+                    <li><strong>1 Week Plan</strong>: $3.99 (~ ₦5,499)</li>
+                    <li><strong>1 Month Plan</strong>: $11.99 (~ ₦16,599)</li>
+                    <li><strong>2 Month Plan</strong>: $22.99 (~ ₦30,199)</li>
+                </ul>
+            </li>
+            <li><strong>Apply Your Key</strong>: Once payment is complete, the admin will generate a secure PIN (e.g., <code>VK-XXXX-XXXX</code>). Paste this code into either the login-block window or the <em>Billing & Access Management</em> portal to instantly extend your access matrix.</li>
+        </ol>
+    </div>
+    """
+    st.markdown(about_html_content, unsafe_allow_html=True)
     st.stop()
 
 # SCREEN 5: MASTER DASHBOARD BASE PLATFORM
