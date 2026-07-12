@@ -165,34 +165,29 @@ st.set_page_config(page_title="Vektor AI", layout="wide")
 
 st.markdown("""
     <style>
-    /* Completely remove the top header bar (Fork button, search, and the three dots menu) */
-    header[data-testid="stHeader"] {
-        display: none !important;
-        height: 0px !important;
-        visibility: hidden !important;
-    }
-    
-    /* Double-check to block the default options hamburger/three-dots dropdown menu entirely */
-    #MainMenu, [data-testid="stActionButton"] { 
-        visibility: hidden !important; 
-        display: none !important; 
-    }
-    
-    /* Obliterate the entire bottom right toolbar footer container (Crown button and the button beside it) */
-    div[data-testid="stStatusWidget"], 
-    .stStatusWidget, 
+    /* Absolute global lockdown for top and bottom cloud navigation wrapper controls */
+    iframe, header, footer, #MainMenu, 
+    [data-testid="stHeader"], 
+    [data-testid="stStatusWidget"],
     [data-testid="stDecoration"],
-    footer,
-    .stViewerToolbar {
-        visibility: hidden !important;
+    [data-testid="stActionButton"],
+    .stStatusWidget,
+    .stViewerToolbar,
+    div[class*="stViewerToolbar"],
+    div[class*="stStatusWidget"],
+    footer[class*="st-"] {
         display: none !important;
+        visibility: hidden !important;
         height: 0px !important;
+        width: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
     
-    /* Clean up structural container space padding */
+    /* Clean up container layout padding rules */
     .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
     }
     
     /* Core App design matrix layout constants */
@@ -207,6 +202,7 @@ st.markdown("""
     .billing-card { background: #111827; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 # ==========================================
