@@ -425,20 +425,19 @@ st.markdown("""
         visibility: visible !important;
         background-color: #05070f !important;
     }
-    
-    /* Reveal Closed/Collapsed Sidebar slightly by peeking 15px from the left with a glowing neon border */
-    section[data-testid="stSidebar"][aria-expanded="false"] {
-        transform: translateX(calc(-100% + 15px)) !important;
-        border-right: 3px solid #00f2fe !important;
-        box-shadow: 5px 0px 20px rgba(0, 242, 254, 0.4) !important;
-        transition: transform 0.3s ease-in-out !important;
-        z-index: 99999 !important;
-    }
+    /* Clean native collapse that completely clears the main screen viewport without overlapping */
+section[data-testid="stSidebar"][aria-expanded="false"] {
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+}
 
-    /* Standard transition rules for smooth opening */
-    section[data-testid="stSidebar"] {
-        transition: transform 0.3s ease-in-out, width 0.3s ease-in-out !important;
-    }
+section[data-testid="stSidebar"][aria-expanded="true"] {
+    border-right: 1px solid #1f293d !important;
+    box-shadow: 4px 0px 15px rgba(0, 0, 0, 0.5) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
     
     [data-testid="sidebar-toggle"] {
         visibility: visible !important;
@@ -1070,7 +1069,8 @@ elif module_selection == tr["oracle_chat"]:
             save_history(st.session_state.current_user, "chat", st.session_state.chat_history)
     if st.session_state.get("chat_history"):
         for q, a in reversed(st.session_state.chat_history):
-            st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b><br>{a}</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b></div>", unsafe_allow_html=True)
+st.markdown(a)
 
 elif module_selection == tr["exec_brief"]:
     st.subheader(tr["exec_brief"])
@@ -1083,7 +1083,9 @@ elif module_selection == tr["exec_brief"]:
             st.session_state.briefing_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "briefing", st.session_state.briefing_store)
     if st.session_state.get("briefing_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.briefing_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.briefing_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["composer"]:
     st.subheader(tr["composer"])
@@ -1098,7 +1100,9 @@ elif module_selection == tr["composer"]:
             st.session_state.draft_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "draft", st.session_state.draft_store)
     if st.session_state.get("draft_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.draft_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.draft_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["extractor"]:
     st.subheader(tr["extractor"])
@@ -1112,7 +1116,9 @@ elif module_selection == tr["extractor"]:
             st.session_state.structure_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "structure", st.session_state.structure_store)
     if st.session_state.get("structure_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.structure_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.structure_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["cross_file"]:
     st.subheader(tr["cross_file"])
@@ -1129,7 +1135,9 @@ elif module_selection == tr["cross_file"]:
             st.session_state.cross_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "cross", st.session_state.cross_store)
     if st.session_state.get("cross_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.cross_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.cross_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["tracker"]:
     st.subheader(tr["tracker"])
@@ -1142,7 +1150,9 @@ elif module_selection == tr["tracker"]:
             st.session_state.tracker_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "tracker", st.session_state.tracker_store)
     if st.session_state.get("tracker_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.tracker_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.tracker_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["sandbox"]:
     st.subheader(tr["sandbox"])
@@ -1153,7 +1163,9 @@ elif module_selection == tr["sandbox"]:
         st.session_state.sandbox_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "sandbox", st.session_state.sandbox_store)
     if st.session_state.get("sandbox_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.sandbox_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.sandbox_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["predictor"]:
     st.subheader(tr["predictor"])
@@ -1169,7 +1181,9 @@ elif module_selection == tr["predictor"]:
         st.session_state.predictor_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "predictor", st.session_state.predictor_store)
     if st.session_state.get("predictor_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.predictor_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.predictor_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["indexer"]:
     st.subheader(tr["indexer"])
@@ -1182,7 +1196,9 @@ elif module_selection == tr["indexer"]:
             st.session_state.indexer_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "indexer", st.session_state.indexer_store)
     if st.session_state.get("indexer_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.indexer_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.indexer_store)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["runway_plan"]:
     st.subheader(tr["runway_plan"])
@@ -1201,7 +1217,10 @@ elif module_selection == tr["runway_plan"]:
         st.session_state.runway_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
     if st.session_state.get("runway_store"): 
-        st.markdown(f"<div class='feature-card'>{st.session_state.runway_store}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+    st.markdown(st.session_state.runway_store)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 st.write("---")
 st.markdown("## 💎 Premium Asset Allocation & Macro Shock Simulator")
