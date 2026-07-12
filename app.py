@@ -163,40 +163,39 @@ LANG_DATA = {
 
 st.set_page_config(page_title="Vektor AI", layout="wide")
 
-st.set_page_config(page_title="Vektor AI", layout="wide")
-
 st.markdown("""
     <style>
-    /* Completely eliminate the top Streamlit header bar (Fork button, search, etc.) */
+    /* Completely remove the top header bar (Fork button, search, and the three dots menu) */
     header[data-testid="stHeader"] {
         display: none !important;
         height: 0px !important;
         visibility: hidden !important;
     }
     
-    /* Hide the default options hamburger menu */
-    #MainMenu { 
+    /* Double-check to block the default options hamburger/three-dots dropdown menu entirely */
+    #MainMenu, [data-testid="stActionButton"] { 
         visibility: hidden !important; 
         display: none !important; 
     }
     
-    /* Obliterate the bottom right connection status / developer toolbar (Kitten emoji, crown) */
+    /* Obliterate the entire bottom right toolbar footer container (Crown button and the button beside it) */
     div[data-testid="stStatusWidget"], 
     .stStatusWidget, 
     [data-testid="stDecoration"],
-    footer {
+    footer,
+    .stViewerToolbar {
         visibility: hidden !important;
         display: none !important;
         height: 0px !important;
     }
     
-    /* Adjust page container padding so nothing looks cut off after hiding elements */
+    /* Clean up structural container space padding */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 2rem !important;
     }
     
-    /* Core App styling constants */
+    /* Core App design matrix layout constants */
     .stApp { background: linear-gradient(135deg, #05070f 0%, #0c0f1d 100%); color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .cyber-logo { font-size: 3.2rem; font-weight: 900; background: linear-gradient(90deg, #00f2fe, #4facfe, #00f2fe); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; font-family: 'Courier New', Courier, monospace; }
     .scanning-line { width: 100%; height: 4px; background: linear-gradient(90deg, transparent, #00f2fe, #4facfe, transparent); background-size: 200% 100%; animation: scanMove 2s linear infinite; margin-bottom: 20px; }
