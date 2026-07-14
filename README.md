@@ -7,7 +7,7 @@ I am a programmer, a young engineer, and the owner and creator of the **Vector A
 ## 👨‍💻 About Me
 Below is my developer profile picture:
 
-![Talabi David Adeoluwa](my-photo.jpg)
+![Talabi David Adeoluwa](IMG_5664.jpeg)
 
 ---
 
