@@ -1,6 +1,6 @@
 # Talabi David Adeoluwa
 
-I am a programmer, a young engineer, and the owner and creator of the **Vektor AI** app. I also work in civil engineering—bringing structured, analytical, and practical problem-solving to both the digital and physical worlds.
+I am a young smart and highly structured intellectual programmer, a young engineer, and the founder / creator of the **Vektor AI** app. I am also civil engineering—bringing structured, analytical, and practical problem-solving to both the digital and physical worlds.
 
 ---
 
