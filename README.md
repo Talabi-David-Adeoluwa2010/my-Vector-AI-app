@@ -1,6 +1,6 @@
 # Talabi David Adeoluwa
 
-I am a programmer, a young engineer, and the owner and creator of the **Vector AI** app. I also work in civil engineering—bringing structured, analytical, and practical problem-solving to both the digital and physical worlds.
+I am a programmer, a young engineer, and the owner and creator of the **Vektor AI** app. I also work in civil engineering—bringing structured, analytical, and practical problem-solving to both the digital and physical worlds.
 
 ---
 
@@ -11,10 +11,27 @@ Below is my developer profile picture:
 
 ---
 
-## 🚀 About My App (Vector AI)
-Vector AI is an intelligent application designed to streamline workflows, deliver smart insights, and provide a seamless user experience. Here is a look at the interface:
+## 🚀 About My App (Vektor AI)
+Vector AI is an intelligent application designed to streamline workflows, deliver smart insights, and provide a seamless user experience. 
 
-![Vector AI Interface](app-screenshot1.png)
+<p align="center">
+  <img src="IMG_5668.jpeg" alt="Vektor AI Logo" width="200"/>
+</p>
+
+### 📊 App Interface & Workspaces
+Here is a complete look at the Vektor AI interface, workspaces, and performance graphs:
+
+| **Main Interface** | **Dynamic Workspace** |
+|:---:|:---:|
+| ![Vektor AI Workspace](IMG_5671.png) | ![Workspace Hot-Keys](IMG_5670.png) |
+
+| **Company Progress Panel** | **Analytics Dashboard** |
+|:---:|:---:|
+| ![Company Progress](IMG_5661.png) | ![Graph Performance](IMG_5662.png) |
+
+| **Additional View** |
+|:---:|
+| ![Workspace Tools](IMG_5663.png) |
 
 ### 🔗 Try the Live App
 Click the link below to run the application live on Render:
