@@ -1,5 +1,16 @@
 import os
 import streamlit as st
+
+# Google Verification Meta Tag
+st.markdown(
+    """
+    <head>
+        <meta name="google-site-verification" content="2SfjDhHFqp0mA70QiG8GScZ3wz8Ju2x67PZR8Qelm3o" />
+    </head>
+    """,
+    unsafe_allow_html=True
+)
+
 import PyPDF2
 import json
 import base64
