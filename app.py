@@ -20,6 +20,17 @@ NOTEPAD_FILE = ".vektor_notepad.json"
 METRICS_FILE = ".vektor_admin_metrics.json"
 PINS_FILE = ".vektor_activation_pins.json"
 SESSION_FILE = ".vektor_session.json"  # Keeps users logged in across application restarts
+import streamlit as st
+
+# Google Verification Tag
+st.markdown(
+    """
+    <head>
+        <meta name="google-site-verification" content="2SfjDhHFqp0mA70QiG8GScZ3wz8Ju2x67PZR8Qelm3o" />
+    </head>
+    """,
+    unsafe_allow_html=True
+)
 
 # ==========================================
 # AUTHENTICATION, STORAGE & PERSISTENCE UTILITIES
