@@ -425,25 +425,23 @@ st.markdown("""
         display: flex !important;
         visibility: visible !important;
         background-color: #05070f !important;
-    }/* Fully hides the sidebar when closed so nothing overlaps the main screen layout */
-section[data-testid="stSidebar"][aria-expanded="false"] {
-    transform: translateX(-100%) !important;
-    box-shadow: none !important;
-    border-right: none !important;
-    visibility: hidden;
-    transition: transform 0.3s ease, visibility 0.3s ease !important;
-}
+    }
 
-/* Stylish and clean look when open */
-section[data-testid="stSidebar"][aria-expanded="true"] {
-    visibility: visible;
-    border-right: 2px solid #00f2fe !important;
-    box-shadow: 10px 0px 30px rgba(0, 242, 254, 0.15) !important;
-    transition: transform 0.3s ease !important;
-}
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(-100%) !important;
+        box-shadow: none !important;
+        border-right: none !important;
+        visibility: hidden;
+        transition: transform 0.3s ease, visibility 0.3s ease !important;
+    }
 
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        visibility: visible;
+        border-right: 2px solid #00f2fe !important;
+        box-shadow: 10px 0px 30px rgba(0, 242, 254, 0.15) !important;
+        transition: transform 0.3s ease !important;
+    }
 
-    
     [data-testid="sidebar-toggle"] {
         visibility: visible !important;
         display: block !important;
@@ -483,9 +481,9 @@ with col_lang1:
     current_time_str = datetime.now(ZoneInfo('Africa/Lagos')).strftime("%Y-%m-%d %H:%M:%S")
     clock_placeholder.markdown(f"<div class='live-clock'>🕒 SYSTEM TIME: {current_time_str}</div>", unsafe_allow_html=True)
 
-# Secure API Auto-Engine Connection
-st.session_state.groq_key = os.environ.get("GROQ_API_KEY", "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")
-client = Groq(api_key=st.session_state.groq_key)
+# Secure API Auto-Engine Connection (Pulls GROQ_API_KEY securely from environment variables)
+groq_api_key = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=groq_api_key) if groq_api_key else None
 
 # ==========================================
 # SEAMLESS LOGIN GATE WITH DYNAMIC PIN ACTIVATION
@@ -579,6 +577,8 @@ if not st.session_state.authenticated:
     render_security_gate()
 
 def query_standalone_engine(prompt):
+    if not client:
+        return "🚨 API Key Missing: GROQ_API_KEY is not configured in environment variables."
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -612,7 +612,6 @@ with st.sidebar:
     if st.button("💳 Billing & Access Management", use_container_width=True):
         st.session_state.active_view = "BILLING"
         st.rerun()
-    # Dedicated Standalone About Application Button in the Sidebar
     if st.button("ℹ️ About Application", use_container_width=True):
         st.session_state.active_view = "ABOUT"
         st.rerun()
@@ -659,7 +658,7 @@ with st.sidebar:
         if u_key in metrics:
             metrics[u_key]["status"] = "Inactive"
             save_admin_metrics(metrics)
-        clear_session()  # Erase the stored session JSON on logout
+        clear_session()
         st.session_state.authenticated = False
         st.rerun()
 
@@ -763,7 +762,7 @@ elif st.session_state.active_view == "FOUNDRY":
             if media_output_type == "Render Real AI Image":
                 encoded_prompt = urllib.parse.quote(creative_prompt)
                 real_image_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=1024&height=512&seed=42&nofeed=true"
-                st.markdown(f"<div class='feature-card'><h4>🖼️ Output Image Generated Result Matrix:</h4></div>", unsafe_allow_html=True)
+                st.markdown("<div class='feature-card'><h4>🖼️ Output Image Generated Result Matrix:</h4></div>", unsafe_allow_html=True)
                 st.image(real_image_url, use_container_width=True)
             else:
                 audio_desc_prompt = f"Convert this description into a highly detailed voiceover text script with technical audio sound design cues: '{creative_prompt}'"
@@ -832,7 +831,7 @@ elif st.session_state.active_view == "FOUNDRY":
             vision_analysis = query_standalone_engine(
                 f"The user has captured an asset photo measuring {edited_img.width}x{edited_img.height} pixels using color filter template '{color_mode}'. "
                 f"Based on their prompt request: '{vision_instruction}', provide an extensive professional evaluation, technical specification insights, "
-                f"and strategic recommendations written in language {st.session_state.lang} reflecting 2026 guidelines."
+                f"and strategic recommendations written in language {st.session_state.lang}."
             )
             st.markdown(f"<div class='feature-card'><h4>📡 Vision Node Diagnostic Report:</h4><br>{vision_analysis}</div>", unsafe_allow_html=True)
     st.stop()
@@ -858,30 +857,16 @@ elif st.session_state.active_view == "BILLING":
         st.write(f"**Computation Lifespan End Threshold:** `{user_meta_profile.get('license_expiry', 'N/A')}`")
         
     with col_b2:
-        st.markdown("<div class='billing-card'>", unsafe_allow_html=True)
-
-    st.markdown(
-        "<h4>👑 Upgrade to Unlimited Sovereign Space</h4>",
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "Unlock unrestricted model context pipelines, unlimited local "
-        "vector database indices, and premium risk tools.\n\n"
-        "📞 Contact Management: +2348024300891\n"
-        "For activation codes and payment bank details. Thank you."
-    )
-
-    st.markdown(
-        """
-        <h3 style='color:#3b82f6;'>$3.99 = #5,499 / Week</h3>
-        <h3 style='color:#3b82f6;'>$11.99 = #16,599 / Month</h3>
-        <h3 style='color:#3b82f6;'>$22.99 = #30,199 / 2 Months</h3>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class='billing-card'>
+                <h4>👑 Upgrade to Unlimited Sovereign Space</h4>
+                <p>Unlock unrestricted model context pipelines, unlimited local vector database indices, and premium risk tools.</p>
+                <p><b>📞 Contact Management:</b> +2348024300891<br>For activation codes and payment bank details. Thank you.</p>
+                <h3 style='color:#3b82f6;'>$3.99 = ₦5,499 / Week</h3>
+                <h3 style='color:#3b82f6;'>$11.99 = ₦16,599 / Month</h3>
+                <h3 style='color:#3b82f6;'>$22.99 = ₦30,199 / 2 Months</h3>
+            </div>
+        """, unsafe_allow_html=True)
         
     st.write("---")
     st.markdown("### 🔑 Apply New Strategic License Token Override")
@@ -921,7 +906,7 @@ elif st.session_state.active_view == "BILLING":
                 st.error("🚨 Specified verification key index string is invalid or already consumed.")
     st.stop()
 
-# SCREEN 4: DEDICATED FULLSCREEN ABOUT APPLICATION VIEW (CLEAN MARKDOWN - NO RAW HTML CODES)
+# SCREEN 4: DEDICATED FULLSCREEN ABOUT APPLICATION VIEW
 elif st.session_state.active_view == "ABOUT":
     st.markdown("<div class='cyber-logo'>ℹ️ ABOUT VEKTOR AI</div>", unsafe_allow_html=True)
     st.caption("Sovereign Information Portal — System Blueprint & Operations Manual")
@@ -1007,7 +992,7 @@ with st.container():
     if st.button(tr["search_btn"], use_container_width=True):
         if search_item.strip() != "":
             st.markdown("<div class='scanning-line'></div>", unsafe_allow_html=True)
-            res = query_standalone_engine(f"As an economy analyst, find the current global market pricing of '{search_item}' and convert it into {target_currency}. Provide a detailed breakdown in {st.session_state.lang} reflecting 2026 insights.")
+            res = query_standalone_engine(f"As an economy analyst, find the current global market pricing of '{search_item}' and convert it into {target_currency}. Provide a detailed breakdown in {st.session_state.lang}.")
             st.markdown(f"<div class='feature-card'><b>{tr['orac_res']}</b><br><br>{res}</div>", unsafe_allow_html=True)
 
 st.write("---")
@@ -1072,11 +1057,11 @@ elif module_selection == tr["oracle_chat"]:
             reply = query_standalone_engine(prompt)
             st.session_state.chat_history.append((user_query, reply))
             save_history(st.session_state.current_user, "chat", st.session_state.chat_history)
-            if st.session_state.get("chat_history"):
-                for q, a in reversed(st.session_state.chat_history):
-                        st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b></div>", unsafe_allow_html=True)
-                        st.markdown(a)
-
+            
+    if st.session_state.get("chat_history"):
+        for q, a in reversed(st.session_state.chat_history):
+            st.markdown(f"<div class='feature-card'><b>❓ Query:</b> {q}<br><br><b>🤖 Answer:</b></div>", unsafe_allow_html=True)
+            st.markdown(a)
 
 elif module_selection == tr["exec_brief"]:
     st.subheader(tr["exec_brief"])
@@ -1088,10 +1073,11 @@ elif module_selection == tr["exec_brief"]:
             prompt = f"Using this text context:\n{st.session_state.raw_context[:4000]}\n\nProvide an executive briefing in language {st.session_state.lang}: 3 bullet summaries, key risk factors, and deadlines."
             st.session_state.briefing_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "briefing", st.session_state.briefing_store)
+            
     if st.session_state.get("briefing_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.briefing_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.briefing_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["composer"]:
     st.subheader(tr["composer"])
@@ -1105,10 +1091,11 @@ elif module_selection == tr["composer"]:
             prompt = f"Context:\n{st.session_state.raw_context[:4000]}\n\nCompose a {style} in language {st.session_state.lang}. Special Instruction: {notes}"
             st.session_state.draft_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "draft", st.session_state.draft_store)
+            
     if st.session_state.get("draft_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.draft_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.draft_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["extractor"]:
     st.subheader(tr["extractor"])
@@ -1121,10 +1108,11 @@ elif module_selection == tr["extractor"]:
             prompt = f"Context text:\n{st.session_state.raw_context[:4000]}\n\nExtract all information relating to {target} in language {st.session_state.lang}."
             st.session_state.structure_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "structure", st.session_state.structure_store)
+            
     if st.session_state.get("structure_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.structure_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.structure_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["cross_file"]:
     st.subheader(tr["cross_file"])
@@ -1140,10 +1128,11 @@ elif module_selection == tr["cross_file"]:
             prompt = f"Analyze these files in language {st.session_state.lang} for contradictions:\n{aggregated_context}\nDirective: {audit_query}"
             st.session_state.cross_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "cross", st.session_state.cross_store)
+            
     if st.session_state.get("cross_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.cross_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.cross_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["tracker"]:
     st.subheader(tr["tracker"])
@@ -1155,10 +1144,11 @@ elif module_selection == tr["tracker"]:
             prompt = f"Extract timelines and task actions in language {st.session_state.lang} from:\n{st.session_state.raw_context[:4000]}"
             st.session_state.tracker_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "tracker", st.session_state.tracker_store)
+            
     if st.session_state.get("tracker_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.tracker_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.tracker_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["sandbox"]:
     st.subheader(tr["sandbox"])
@@ -1168,10 +1158,11 @@ elif module_selection == tr["sandbox"]:
         prompt = f"Act as an expert risk auditor. Stress-test this business idea in language {st.session_state.lang}: '{idea}'"
         st.session_state.sandbox_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "sandbox", st.session_state.sandbox_store)
+        
     if st.session_state.get("sandbox_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.sandbox_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.sandbox_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["predictor"]:
     st.subheader(tr["predictor"])
@@ -1186,10 +1177,11 @@ elif module_selection == tr["predictor"]:
         prompt = f"Act as a tech project architect. Analyze brief: '{project_brief}'. Strategy: {tier_profile} with {contingency_buffer}% buffer. Report structural ranges using currency {target_currency} written in language {st.session_state.lang}."
         st.session_state.predictor_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "predictor", st.session_state.predictor_store)
+        
     if st.session_state.get("predictor_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.predictor_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.predictor_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["indexer"]:
     st.subheader(tr["indexer"])
@@ -1201,10 +1193,11 @@ elif module_selection == tr["indexer"]:
             prompt = f"Generate a technical index and metadata taxonomy tags in language {st.session_state.lang} for:\n{st.session_state.raw_context[:4000]}"
             st.session_state.indexer_store = query_standalone_engine(prompt)
             save_history(st.session_state.current_user, "indexer", st.session_state.indexer_store)
+            
     if st.session_state.get("indexer_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.indexer_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.indexer_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 elif module_selection == tr["runway_plan"]:
     st.subheader(tr["runway_plan"])
@@ -1222,10 +1215,11 @@ elif module_selection == tr["runway_plan"]:
         prompt = f"Act as a virtual corporate CFO. Statement: '{revenue_text[:2000]}'. Expenses: {total_liabilities} in {target_currency}. Map items sold, calculate net remainder growth capital, and list step-by-step optimization tactics in language {st.session_state.lang}."
         st.session_state.runway_store = query_standalone_engine(prompt)
         save_history(st.session_state.current_user, "runway", st.session_state.runway_store)
+        
     if st.session_state.get("runway_store"): 
-            st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
-            st.markdown(st.session_state.runway_store)
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'>", unsafe_allow_html=True)
+        st.markdown(st.session_state.runway_store)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 st.write("---")
@@ -1275,4 +1269,3 @@ with st.container():
             "Capital Allocation ($)": [growth_cap, hedge_cap, conservative_remainder]
         }).set_index("Asset Pillars")
         st.bar_chart(allocation_metrics)
-
