@@ -300,6 +300,7 @@ except Exception:
   saved_user = None
 
 
+
   if saved_user:
     st.session_state.authenticated = True
     st.session_state.current_user = saved_user
