@@ -287,8 +287,8 @@ if "current_user" not in st.session_state:
   st.session_state.current_user = ""
 
 # Try fetching from cookie if not already authenticated in memory
-if not st.session_state.authenticated:
- try:
+ if not st.session_state.authenticated:
+try:
     cookies_dict = cookie_controller.getAll()
     saved_user = (
         cookies_dict.get("vektor_active_user")
