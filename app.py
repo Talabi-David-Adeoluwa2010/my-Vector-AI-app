@@ -290,14 +290,15 @@ if "current_user" not in st.session_state:
 if not st.session_state.authenticated:
   # Safely fetch the cookie with a fallback check to prevent NoneType errors
   try:
-  cookies_dict = cookie_controller.getAll()
-  saved_user = (
-      cookies_dict.get("vektor_active_user")
-      if cookies_dict and isinstance(cookies_dict, dict)
-      else None
-  )
+    cookies_dict = cookie_controller.getAll()
+    saved_user = (
+        cookies_dict.get("vektor_active_user")
+        if cookies_dict and isinstance(cookies_dict, dict)
+        else None
+    )
 except Exception:
-  saved_user = None
+    saved_user = None
+
 
 
 
