@@ -12,6 +12,7 @@ import PyPDF2
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_cookies_controller import CookieController
+import urllib.parse
 
 # File Paths (SESSION_FILE removed for security & persistence fix)
 VAULT_FILE = ".vektor_vault.json"
@@ -287,20 +288,20 @@ if "current_user" not in st.session_state:
 
 # Try fetching from cookie if not already authenticated in memory
 if not st.session_state.authenticated:
-# Safely fetch the cookie with a fallback check to prevent NoneType errors
-      try:
-          cookies_dict = cookie_controller.getAll()
-          saved_user = (
-          cookies_dict.get("vektor_active_user")
-          if cookies_dict and isinstance(cookies_dict, dict)
-              else None
-  )
-          except Exception:
-              saved_user = None
+  # Safely fetch the cookie with a fallback check to prevent NoneType errors
+  try:
+    cookies_dict = cookie_controller.getAll()
+    saved_user = (
+        cookies_dict.get("vektor_active_user")
+        if cookies_dict and isinstance(cookies_dict, dict)
+        else None
+    )
+  except Exception:
+    saved_user = None
 
-          if saved_user:
-              st.session_state.authenticated = True
-              st.session_state.current_user = saved_user
+  if saved_user:
+    st.session_state.authenticated = True
+    st.session_state.current_user = saved_user
 
 if "loading_complete" not in st.session_state:
   st.session_state.loading_complete = False
