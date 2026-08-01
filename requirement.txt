@@ -1,5 +1,7 @@
-streamlit
-groq
 PyPDF2
+groq
 pandas
 pillow
+streamlit
+streamlit-cookies-controller==0.0.2
+
