@@ -279,20 +279,21 @@ components.html(
     height=0,
 )
 
-# Initialize Session variables with mobile cookie hook for true persistent session across restarts until explicit logout
-saved_user = cookie_controller.get("vektor_active_user")
+# Initialize Session variables safely to avoid dropping session during quick reloads
+if "authenticated" not in st.session_state:
+  st.session_state.authenticated = False
+if "current_user" not in st.session_state:
+  st.session_state.current_user = ""
+
+# Try fetching from cookie if not already authenticated in memory
+if not st.session_state.authenticated:
+  saved_user = cookie_controller.get("vektor_active_user")
+  if saved_user:
+    st.session_state.authenticated = True
+    st.session_state.current_user = saved_user
 
 if "loading_complete" not in st.session_state:
   st.session_state.loading_complete = False
-
-if saved_user:
-  st.session_state.authenticated = True
-  st.session_state.current_user = saved_user
-else:
-  if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-  if "current_user" not in st.session_state:
-    st.session_state.current_user = ""
 
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = []
