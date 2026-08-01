@@ -288,17 +288,17 @@ if "current_user" not in st.session_state:
 
 # Try fetching from cookie if not already authenticated in memory
 if not st.session_state.authenticated:
-  saved_user = None
-  try:
-    cookies_dict = cookie_controller.getAll()
-    if cookies_dict and isinstance(cookies_dict, dict):
-      saved_user = cookies_dict.get("vektor_active_user")
-  except Exception:
-    saved_user = None
+      saved_user = None
+      try:
+        cookies_dict = cookie_controller.getAll()
+        if cookies_dict and isinstance(cookies_dict, dict):
+          saved_user = cookies_dict.get("vektor_active_user")
+      except Exception:
+        saved_user = None
 
-  if saved_user:
-    st.session_state.authenticated = True
-    st.session_state.current_user = saved_user
+      if saved_user:
+        st.session_state.authenticated = True
+        st.session_state.current_user = saved_user
 
 if "loading_complete" not in st.session_state:
   st.session_state.loading_complete = False
