@@ -116,7 +116,7 @@ def load_admin_metrics():
         return json.load(f)
     except:
       return {}
-  return {}
+
 
 
 def save_admin_metrics(data):
