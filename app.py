@@ -296,8 +296,8 @@ try:
 if cookies_dict and isinstance(cookies_dict, dict)
         else None
     )
-except Exception:
-    saved_user = None
+        except Exception:
+                      saved_user = None
 
 
 
