@@ -12,18 +12,17 @@ from PIL import Image
 import io
 import urllib.parse
 import streamlit.components.v1 as components
+from streamlit_cookies_controller import CookieController
 
-# File Paths
+# File Paths (SESSION_FILE removed for security & persistence fix)
 VAULT_FILE = ".vektor_vault.json"
 HISTORY_FILE = ".vektor_history.json"
 NOTEPAD_FILE = ".vektor_notepad.json"
 METRICS_FILE = ".vektor_admin_metrics.json"
 PINS_FILE = ".vektor_activation_pins.json"
-SESSION_FILE = ".vektor_session.json"  # Keeps users logged in across application restarts
-
 
 # ==========================================
-# AUTHENTICATION, STORAGE & PERSISTENCE UTILITIES
+# AUTHENTICATION & STORAGE UTILITIES
 # ==========================================
 def encode_cred(text):
     return base64.b64encode(text.encode()).decode()
@@ -93,31 +92,6 @@ def save_notepad(username, content, history_list):
     notes[encode_cred(username)] = {"current": content, "history": history_list}
     with open(NOTEPAD_FILE, "w") as f: 
         json.dump(notes, f)
-
-# Persistent Auto-Login File Handlers
-def save_session(username):
-    try:
-        with open(SESSION_FILE, "w") as f:
-            json.dump({"active_user": username}, f)
-    except:
-        pass
-
-def load_session():
-    if os.path.exists(SESSION_FILE):
-        try:
-            with open(SESSION_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("active_user")
-        except:
-            return None
-    return None
-
-def clear_session():
-    if os.path.exists(SESSION_FILE):
-        try:
-            os.remove(SESSION_FILE)
-        except:
-            pass
 
 # ==========================================
 # BACKGROUND USER ACTIVITY METRICS AGENT
@@ -216,6 +190,9 @@ st.set_page_config(
     page_icon="playstore.png"
 )
 
+# Initialize Cookie Controller for browser-based session persistence
+cookie_controller = CookieController()
+
 # Force Safari to use your custom icon on the iPhone Home Screen
 components.html(
     """
@@ -229,8 +206,9 @@ components.html(
     height=0,
 )
 
-# Initialize Session variables with local persistence hook
-saved_user = load_session()
+# Initialize Session variables with mobile cookie hook
+saved_user = cookie_controller.get("vektor_active_user")
+
 if "loading_complete" not in st.session_state: 
     st.session_state.loading_complete = False
 
@@ -548,8 +526,8 @@ def render_security_gate():
                                     st.error("🚨 Invalid or already claimed Activation PIN.")
                             st.stop()
                     
-                    # Store login credentials persistently to session file
-                    save_session(input_user)
+                    # Store login credentials persistently to browser cookies
+                    cookie_controller.set("vektor_active_user", input_user)
                     st.session_state.authenticated = True
                     st.session_state.current_user = input_user
                     track_user_activity(input_user, action="login")
@@ -652,13 +630,15 @@ with st.sidebar:
         save_history(st.session_state.current_user, "chat", [])
         st.toast("Local persistent records flushed cleanly!")
         st.rerun()
+        
     if st.button(tr["logout"], use_container_width=True):
         metrics = load_admin_metrics()
         u_key = encode_cred(st.session_state.current_user)
         if u_key in metrics:
             metrics[u_key]["status"] = "Inactive"
             save_admin_metrics(metrics)
-        clear_session()
+        # Flush the browser cookie securely
+        cookie_controller.remove("vektor_active_user")
         st.session_state.authenticated = False
         st.rerun()
 
@@ -1269,3 +1249,4 @@ with st.container():
             "Capital Allocation ($)": [growth_cap, hedge_cap, conservative_remainder]
         }).set_index("Asset Pillars")
         st.bar_chart(allocation_metrics)
+
