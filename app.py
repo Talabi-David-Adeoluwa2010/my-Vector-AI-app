@@ -296,7 +296,7 @@ try:
         else None
     )
 except Exception:
-    saved_user = None
+                  saved_user = None
 
   if saved_user:
     st.session_state.authenticated = True
